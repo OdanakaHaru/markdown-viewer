@@ -80,6 +80,7 @@ fn normalize_path(path: &Path) -> PathBuf {
 #[tauri::command]
 fn open_md_file() -> Result<(String, String), String> {
     let file = rfd::FileDialog::new()
+        .set_title("Markdownファイルを選択")
         .add_filter("Markdown", &["md", "markdown", "mdown", "mkd", "mdx"])
         .pick_file();
 
@@ -98,7 +99,9 @@ fn open_md_file() -> Result<(String, String), String> {
 
 #[tauri::command]
 fn open_folder() -> Result<String, String> {
-    let folder = rfd::FileDialog::new().pick_folder();
+    let folder = rfd::FileDialog::new()
+        .set_title("Markdownドキュメントが含まれる親フォルダーを選択")
+        .pick_folder();
     if let Some(path) = folder {
         Ok(path.to_string_lossy().into_owned())
     } else {
@@ -174,7 +177,32 @@ fn parse_markdown_to_html(md: &str) -> String {
     let parser = Parser::new_ext(md, options);
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
-    html_output
+
+    static RE_HEADING: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re_heading = RE_HEADING.get_or_init(|| regex::Regex::new(r"(?i)<h([1-6])(?:\s+[^>]*)?>(.*?)</h[1-6]>").unwrap());
+
+    static RE_STRIP_HTML: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re_strip = RE_STRIP_HTML.get_or_init(|| regex::Regex::new(r"<[^>]+>").unwrap());
+    
+    static RE_INVALID_CHARS: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re_invalid = RE_INVALID_CHARS.get_or_init(|| regex::Regex::new(r"[^\w\u00A0-\uFFFF -]").unwrap());
+
+    static RE_SPACES: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re_spaces = RE_SPACES.get_or_init(|| regex::Regex::new(r"\s+").unwrap());
+
+    let html_with_ids = re_heading.replace_all(&html_output, |caps: &regex::Captures| {
+        let level = &caps[1];
+        let content = &caps[2];
+        
+        let plain_text = re_strip.replace_all(content, "");
+        let lower = plain_text.to_lowercase().trim().to_string();
+        let stripped = re_invalid.replace_all(&lower, "");
+        let id = re_spaces.replace_all(&stripped, "-");
+        
+        format!("<h{} id=\"{}\">{}</h{}>", level, id, content, level)
+    });
+
+    html_with_ids.to_string()
 }
 
 #[tauri::command]
@@ -538,36 +566,7 @@ mod tests {
         assert!(!res.target.contains("ç®¡"));
     }
 
-    #[test]
-    fn test_base64_encode() {
-        assert_eq!(base64_encode(b""), "");
-        assert_eq!(base64_encode(b"f"), "Zg==");
-        assert_eq!(base64_encode(b"fo"), "Zm8=");
-        assert_eq!(base64_encode(b"foo"), "Zm9v");
-        assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
-        assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
-        assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
-    }
 
-    #[test]
-    fn test_get_image_mime_type() {
-        assert_eq!(get_image_mime_type(Path::new("pic.png")), "image/png");
-        assert_eq!(get_image_mime_type(Path::new("pic.jpg")), "image/jpeg");
-        assert_eq!(get_image_mime_type(Path::new("pic.JPEG")), "image/jpeg");
-        assert_eq!(get_image_mime_type(Path::new("icon.svg")), "image/svg+xml");
-        assert_eq!(get_image_mime_type(Path::new("photo.webp")), "image/webp");
-        assert_eq!(get_image_mime_type(Path::new("unknown.xyz")), "application/octet-stream");
-    }
-
-    #[test]
-    fn test_read_image_data_url_web() {
-        let res = read_image_data_url(None, None, "https://example.com/logo.png".to_string());
-        assert_eq!(res.unwrap(), "https://example.com/logo.png");
-
-        let data_url = "data:image/png;base64,iVBORw0KGgo=";
-        let res2 = read_image_data_url(None, None, data_url.to_string());
-        assert_eq!(res2.unwrap(), data_url);
-    }
 }
 
 

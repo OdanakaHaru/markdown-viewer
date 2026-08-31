@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import 'github-markdown-css/github-markdown.css';
 import './App.css';
-import type { FileEntry, ResolvedLink, ThemeMode } from './types';
+import type { FileEntry, ResolvedLink, ThemeMode, PaneItem, TabItem } from './types';
 import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
+import { MarkdownPane } from './components/MarkdownPane';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import {
   SidebarToggleIcon,
   FolderOpenBtnIcon,
@@ -44,15 +46,57 @@ function slugify(text: string): string {
     .replace(/\s+/g, '-');
 }
 
+/**
+ * ファイルパスから親ディレクトリのパスを取得する
+ */
+function getParentDirPath(filePath: string): string | null {
+  const lastIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  if (lastIndex <= 0) return null;
+  return filePath.substring(0, lastIndex);
+}
+
+/**
+ * ファイルパスまたはディレクトリパスから末尾のディレクトリ名/ファイル名を取得する
+ */
+function getPathBaseName(pathStr: string): string {
+  return pathStr.split(/[/\\]/).filter(Boolean).pop() || pathStr;
+}
+
+/**
+ * filePath が targetDirPath の配下にあるかどうかを判定する
+ */
+function isSubpathOf(filePath: string, targetDirPath: string): boolean {
+  const normFile = filePath.replace(/\\/g, '/').toLowerCase();
+  const normDir = targetDirPath.replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '');
+  return normFile === normDir || normFile.startsWith(normDir + '/');
+}
+
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 9);
+}
+
+/** 閉じたタブの履歴保持上限 */
+const MAX_CLOSED_TABS_HISTORY = 10;
+
+/** 閉じたタブの履歴エントリ */
+interface ClosedTabEntry {
+  tab: TabItem;
+  paneId: string;
+}
+
 function App() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [folderName, setFolderName] = useState<string | null>(null);
   const [rootEntries, setRootEntries] = useState<FileEntry[]>([]);
   const [isLoadingRoot, setIsLoadingRoot] = useState(false);
 
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [content, setContent] = useState('');
+  // ペイン管理
+  const [panes, setPanes] = useState<PaneItem[]>([{ id: 'pane-1', tabs: [], activeTabId: null }]);
+  const [activePaneId, setActivePaneId] = useState<string>('pane-1');
+
+  // 閉じたタブの履歴（Ctrl+Shift+T で復元用）
+  const [closedTabsHistory, setClosedTabsHistory] = useState<ClosedTabEntry[]>([]);
+
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -69,6 +113,17 @@ function App() {
     return window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // ペインのファイルが0になったらペインを閉じるかの設定
+  const [autoCloseEmptyPane, setAutoCloseEmptyPane] = useState<boolean>(() => {
+    const saved = localStorage.getItem('markdown_auto_close_empty_pane');
+    return saved === 'true'; // デフォルトはfalse。保存されていればそれに従う
+  });
+
+  const handleAutoCloseEmptyPaneChange = (value: boolean) => {
+    setAutoCloseEmptyPane(value);
+    localStorage.setItem('markdown_auto_close_empty_pane', String(value));
+  };
 
   // システムのカラースキーム変更を監視
   useEffect(() => {
@@ -114,14 +169,26 @@ function App() {
     });
   }, []);
 
+  // Title update effect based on active tab
+  useEffect(() => {
+    const activePane = panes.find(p => p.id === activePaneId);
+    const activeTab = activePane?.tabs.find(t => t.id === activePane.activeTabId);
+    if (activeTab) {
+      updateTitle(activeTab.fileName, folderName);
+    } else {
+      updateTitle('Markdown Viewer', folderName);
+    }
+  }, [panes, activePaneId, folderName, updateTitle]);
+
   // アンカー位置へスムーズにスクロールする
-  const scrollToAnchor = useCallback((hash: string) => {
+  const scrollToAnchor = useCallback((hash: string, _paneId?: string) => {
     if (!hash) return;
     try {
       const rawHash = hash.replace(/^#/, '');
       const decoded = decodeURIComponent(rawHash).trim();
       const slug = slugify(decoded);
 
+      // paneIdが指定されている場合は、そのペイン内の要素に限定する（ここでは簡易的にdocument全体から検索）
       const targetElement =
         document.getElementById(decoded) ||
         document.getElementById(slug) ||
@@ -164,50 +231,42 @@ function App() {
     }
   }, []);
 
-  // F11 (全画面切り替え) および Escape (全画面解除) のキーイベント監視
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'F11') {
-        e.preventDefault();
-        await toggleFullscreen();
-      } else if (e.key === 'Escape' && !isSettingsOpen) {
-        if (isTauri && appWindow) {
-          try {
-            const isFull = await appWindow.isFullscreen();
-            if (isFull) {
-              await appWindow.setFullscreen(false);
-              setIsFullscreen(false);
-            }
-          } catch (err) {
-            console.error('全画面モードの解除に失敗:', err);
-          }
-        } else if (document.fullscreenElement) {
-          try {
-            await document.exitFullscreen();
-            setIsFullscreen(false);
-          } catch (err) {
-            console.error('全画面モードの解除に失敗:', err);
-          }
+  // 全画面解除の処理（Escapeキー用）
+  const exitFullscreen = useCallback(async () => {
+    if (isTauri && appWindow) {
+      try {
+        const isFull = await appWindow.isFullscreen();
+        if (isFull) {
+          await appWindow.setFullscreen(false);
+          setIsFullscreen(false);
         }
+      } catch (err) {
+        console.error('全画面モードの解除に失敗:', err);
       }
-    };
+    } else if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      } catch (err) {
+        console.error('全画面モードの解除に失敗:', err);
+      }
+    }
+  }, []);
 
+  // fullscreenchangeイベントの監視
+  useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [toggleFullscreen, isSettingsOpen]);
+  }, []);
 
   useEffect(() => {
-    // windowレベルでdragover/dropのデフォルト動作を抑止し、
-    // 🚫カーソルが表示されるのを防ぐ
     const preventDefaults = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
@@ -264,38 +323,257 @@ function App() {
     }
   };
 
+  // ペイン操作用のヘルパー関数群
+  const addTabToPane = useCallback((paneId: string, tab: TabItem) => {
+    setPanes(prev => prev.map(pane => {
+      if (pane.id === paneId) {
+        return {
+          ...pane,
+          tabs: [...pane.tabs, tab],
+          activeTabId: tab.id
+        };
+      }
+      return pane;
+    }));
+  }, []);
+
+  const handleSelectTab = useCallback((paneId: string, tabId: string) => {
+    setPanes(prev => prev.map(pane => {
+      if (pane.id === paneId) {
+        return { ...pane, activeTabId: tabId };
+      }
+      return pane;
+    }));
+  }, []);
+
+  const handleClosePane = useCallback((paneId: string) => {
+    setPanes(prev => {
+      if (prev.length <= 1) return prev; // 最後の1ペインは閉じない
+      const newPanes = prev.filter(p => p.id !== paneId);
+      return newPanes;
+    });
+    setActivePaneId(prev => {
+      if (prev === paneId) {
+        const remaining = panes.filter(p => p.id !== paneId);
+        return remaining.length > 0 ? remaining[remaining.length - 1].id : prev;
+      }
+      return prev;
+    });
+  }, [panes]);
+
+  const handleCloseTab = useCallback((paneId: string, tabId: string) => {
+    const currentPane = panes.find(p => p.id === paneId);
+    if (!currentPane) return;
+
+    // 閉じるタブを履歴に保存（復元用）
+    const closingTab = currentPane.tabs.find(t => t.id === tabId);
+    if (closingTab) {
+      setClosedTabsHistory(prev => {
+        const newHistory = [{ tab: closingTab, paneId }, ...prev];
+        return newHistory.slice(0, MAX_CLOSED_TABS_HISTORY);
+      });
+    }
+
+    const newTabs = currentPane.tabs.filter(t => t.id !== tabId);
+
+    if (newTabs.length === 0 && panes.length >= 2 && autoCloseEmptyPane) {
+      handleClosePane(paneId);
+      return;
+    }
+
+    setPanes(prev => prev.map(pane => {
+      if (pane.id === paneId) {
+        let newActiveTabId = pane.activeTabId;
+        if (pane.activeTabId === tabId) {
+          newActiveTabId = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
+        }
+        return { ...pane, tabs: newTabs, activeTabId: newActiveTabId };
+      }
+      return pane;
+    }));
+  }, [panes, autoCloseEmptyPane, handleClosePane]);
+
+  const handleSplitPane = (paneId: string) => {
+    if (panes.length >= 3) return; // 最大3ペイン
+    const currentPane = panes.find(p => p.id === paneId);
+    if (!currentPane) return;
+
+    const newPaneId = `pane-${generateId()}`;
+    // 現在のペインのアクティブタブをコピーして新しいペインを作成
+    const activeTab = currentPane.tabs.find(t => t.id === currentPane.activeTabId);
+    let newTabs: TabItem[] = [];
+    let newActiveTabId: string | null = null;
+    
+    if (activeTab) {
+      const clonedTab = { ...activeTab, id: generateId() };
+      newTabs.push(clonedTab);
+      newActiveTabId = clonedTab.id;
+    }
+
+    const paneIndex = panes.findIndex(p => p.id === paneId);
+    const newPanes = [...panes];
+    newPanes.splice(paneIndex + 1, 0, { id: newPaneId, tabs: newTabs, activeTabId: newActiveTabId });
+    setPanes(newPanes);
+    setActivePaneId(newPaneId);
+  };
+
+  const handleMoveTab = (sourcePaneId: string, tabId: string, targetPaneId: string) => {
+    if (sourcePaneId === targetPaneId) return;
+    
+    const sourcePane = panes.find(p => p.id === sourcePaneId);
+    const tabToMove = sourcePane?.tabs.find(t => t.id === tabId);
+    if (!tabToMove) return;
+
+    const sourceNewTabs = sourcePane!.tabs.filter(t => t.id !== tabId);
+
+    if (sourceNewTabs.length === 0 && panes.length >= 2 && autoCloseEmptyPane) {
+      setPanes(prev => {
+        let newPanes = prev.filter(p => p.id !== sourcePaneId);
+        newPanes = newPanes.map(p => {
+          if (p.id === targetPaneId) {
+            return {
+              ...p,
+              tabs: [...p.tabs, tabToMove],
+              activeTabId: tabToMove.id
+            };
+          }
+          return p;
+        });
+        return newPanes;
+      });
+      setActivePaneId(targetPaneId);
+      return;
+    }
+
+    setPanes(prev => {
+      let newPanes = [...prev];
+      
+      newPanes = newPanes.map(p => {
+        if (p.id === sourcePaneId) {
+          const newTabs = p.tabs.filter(t => t.id !== tabId);
+          let newActiveTabId = p.activeTabId;
+          if (p.activeTabId === tabId) {
+            newActiveTabId = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
+          }
+          return { ...p, tabs: newTabs, activeTabId: newActiveTabId };
+        }
+        return p;
+      });
+
+      newPanes = newPanes.map(p => {
+        if (p.id === targetPaneId) {
+          return {
+            ...p,
+            tabs: [...p.tabs, tabToMove],
+            activeTabId: tabToMove.id
+          };
+        }
+        return p;
+      });
+
+      return newPanes;
+    });
+    setActivePaneId(targetPaneId);
+  };
+
+  // --- タブナビゲーション用ヘルパー ---
+
+  /** アクティブペインの次のタブに切り替え */
+  const goToNextTab = useCallback(() => {
+    const pane = panes.find(p => p.id === activePaneId);
+    if (!pane || pane.tabs.length <= 1) return;
+    const currentIndex = pane.tabs.findIndex(t => t.id === pane.activeTabId);
+    const nextIndex = (currentIndex + 1) % pane.tabs.length;
+    handleSelectTab(activePaneId, pane.tabs[nextIndex].id);
+  }, [panes, activePaneId, handleSelectTab]);
+
+  /** アクティブペインの前のタブに切り替え */
+  const goToPrevTab = useCallback(() => {
+    const pane = panes.find(p => p.id === activePaneId);
+    if (!pane || pane.tabs.length <= 1) return;
+    const currentIndex = pane.tabs.findIndex(t => t.id === pane.activeTabId);
+    const prevIndex = (currentIndex - 1 + pane.tabs.length) % pane.tabs.length;
+    handleSelectTab(activePaneId, pane.tabs[prevIndex].id);
+  }, [panes, activePaneId, handleSelectTab]);
+
+  /** アクティブペインのN番目のタブに切り替え（1始まり、9は最後のタブ） */
+  const goToNthTab = useCallback((n: number) => {
+    const pane = panes.find(p => p.id === activePaneId);
+    if (!pane || pane.tabs.length === 0) return;
+    const index = n === 9 ? pane.tabs.length - 1 : Math.min(n - 1, pane.tabs.length - 1);
+    handleSelectTab(activePaneId, pane.tabs[index].id);
+  }, [panes, activePaneId, handleSelectTab]);
+
+  /** アクティブペインのアクティブタブを閉じる */
+  const closeActiveTab = useCallback(() => {
+    const pane = panes.find(p => p.id === activePaneId);
+    if (!pane || !pane.activeTabId) return;
+    handleCloseTab(activePaneId, pane.activeTabId);
+  }, [panes, activePaneId, handleCloseTab]);
+
+  /** 最後に閉じたタブを復元 */
+  const handleReopenClosedTab = useCallback(() => {
+    if (closedTabsHistory.length === 0) return;
+    const [lastClosed, ...rest] = closedTabsHistory;
+    setClosedTabsHistory(rest);
+
+    // 復元先のペインが存在するか確認。なければアクティブペインに復元
+    const targetPaneId = panes.find(p => p.id === lastClosed.paneId)
+      ? lastClosed.paneId
+      : activePaneId;
+
+    const restoredTab: TabItem = {
+      ...lastClosed.tab,
+      id: generateId(), // 新しいIDを付与して重複を避ける
+    };
+
+    addTabToPane(targetPaneId, restoredTab);
+    setActivePaneId(targetPaneId);
+  }, [closedTabsHistory, panes, activePaneId, addTabToPane]);
+
+  const handleDropFile = (filePath: string, targetPaneId: string) => {
+    handleSelectFile(filePath, null, targetPaneId);
+  };
+
   // ファイルを選択して表示
   const handleSelectFile = useCallback(
-    async (path: string, initialHash?: string | null) => {
+    async (path: string, initialHash?: string | null, targetPaneId?: string) => {
       try {
         const [filePath, text] = await invoke<[string, string]>('read_md_file', { path });
         const filename = filePath.split(/[/\\]/).pop() || 'Untitled';
-        setSelectedFilePath(filePath);
-        setSelectedFileName(filename);
-        setContent(text);
+        
+        const newTab: TabItem = {
+          id: generateId(),
+          filePath,
+          fileName: filename,
+          content: text
+        };
+
+        const targetId = targetPaneId || activePaneId;
+        addTabToPane(targetId, newTab);
+        setActivePaneId(targetId);
         setError('');
-        updateTitle(filename, folderName);
 
         if (initialHash) {
           setTimeout(() => {
-            scrollToAnchor(initialHash);
+            scrollToAnchor(initialHash, targetId);
           }, 100);
         }
       } catch (err: unknown) {
         setError(typeof err === 'string' ? err : 'ファイルの読み込みに失敗しました。');
       }
     },
-    [folderName, scrollToAnchor, updateTitle]
+    [activePaneId, addTabToPane, scrollToAnchor]
   );
 
   // Markdownリンクのクリック処理
   const handleLinkClick = useCallback(
-    async (href: string) => {
+    async (href: string, sourcePaneId: string) => {
       if (!href) return;
 
       // 1. 同一ドキュメント内のアンカーリンク (#見出し)
       if (href.startsWith('#')) {
-        scrollToAnchor(href);
+        scrollToAnchor(href, sourcePaneId);
         return;
       }
 
@@ -308,8 +586,12 @@ function App() {
       }
 
       try {
+        const sourcePane = panes.find(p => p.id === sourcePaneId);
+        const sourceTab = sourcePane?.tabs.find(t => t.id === sourcePane.activeTabId);
+        const baseFilePath = sourceTab?.filePath || null;
+
         const resolved = await invoke<ResolvedLink>('resolve_link_target', {
-          baseFilePath: selectedFilePath,
+          baseFilePath,
           baseFolderPath: folderPath,
           href,
         });
@@ -322,12 +604,13 @@ function App() {
 
           case 'anchor':
             if (resolved.hash) {
-              scrollToAnchor(resolved.hash);
+              scrollToAnchor(resolved.hash, sourcePaneId);
             }
             break;
 
           case 'markdown':
-            await handleSelectFile(resolved.target, resolved.hash);
+            // リンク先は元のペインで新しいタブとして開く
+            await handleSelectFile(resolved.target, resolved.hash, sourcePaneId);
             break;
 
           case 'markdown_not_found':
@@ -343,81 +626,50 @@ function App() {
         setError(typeof err === 'string' ? err : 'リンクを開くことができませんでした。');
       }
     },
-    [folderPath, handleSelectFile, scrollToAnchor, selectedFilePath]
+    [folderPath, handleSelectFile, scrollToAnchor, panes]
   );
 
-  // HTMLコンテンツマウント後の処理（画像置換、見出しID付与）
-  useEffect(() => {
-    if (!content) return;
-    const container = document.querySelector('.markdown-body');
-    if (!container) return;
-
-    // 画像パスの置換
-    const images = container.querySelectorAll('img');
-    images.forEach((img) => {
-      const src = img.getAttribute('src');
-      if (src && !src.startsWith('data:') && !src.startsWith('http')) {
-        invoke<string>('read_image_data_url', {
-          baseFilePath: selectedFilePath,
-          baseFolderPath: folderPath,
-          src,
-        })
-          .then((dataUrl) => {
-            img.setAttribute('src', dataUrl);
-          })
-          .catch((err) => {
-            console.error('画像の読み込みに失敗しました:', err);
-          });
-      }
-    });
-
-    // 見出しへのID付与（アンカーリンク用）
-    const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    headings.forEach((heading) => {
-      if (!heading.id) {
-        const text = heading.textContent || '';
-        const id = slugify(text);
-        if (id) heading.id = id;
-      }
-    });
-  }, [content, selectedFilePath, folderPath]);
-
-  // HTMLクリック時のイベントハンドラ（リンクのインターセプト）
-  const handleHtmlClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const a = target.closest('a');
-    if (a) {
-      e.preventDefault();
-      const href = a.getAttribute('href');
-      if (href) {
-        handleLinkClick(href);
-      }
-    }
-  }, [handleLinkClick]);
-
   // 単一の「ファイルを開く」ハンドラ
-  const handleOpenFile = async () => {
+  const handleOpenFile = useCallback(async () => {
     if (!isTauri) {
       setError('この機能はデスクトップアプリ環境でのみ動作します。ファイルをドラッグ＆ドロップしてください。');
       return;
     }
     try {
       const [path, text] = await invoke<[string, string]>('open_md_file');
-      const filename = path.split(/[/\\]/).pop() || 'Untitled';
-      setSelectedFilePath(path);
-      setSelectedFileName(filename);
-      setContent(text);
+      const filename = getPathBaseName(path) || 'Untitled';
+      
+      const newTab: TabItem = {
+        id: generateId(),
+        filePath: path,
+        fileName: filename,
+        content: text
+      };
+
+      addTabToPane(activePaneId, newTab);
       setError('');
-      updateTitle(filename, folderName);
+
+      // 親ディレクトリの自動判定とサイドバー読み込み
+      const parentDir = getParentDirPath(path);
+      const parentDirName = parentDir ? getPathBaseName(parentDir) : null;
+      const isAlreadyInFolder = folderPath ? isSubpathOf(path, folderPath) : false;
+
+      if (!isAlreadyInFolder && parentDir && parentDirName) {
+        setFolderPath(parentDir);
+        setFolderName(parentDirName);
+        setIsSidebarOpen(true);
+        await loadDirectory(parentDir);
+      }
     } catch (err: unknown) {
       if (err !== 'No file selected') {
         setError(typeof err === 'string' ? err : 'ファイルの選択に失敗しました。');
       }
     }
-  };
+  }, [activePaneId, addTabToPane, folderPath, loadDirectory]);
 
   // ドラッグ中の判定
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.types.includes('application/json')) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
@@ -453,15 +705,41 @@ function App() {
     try {
       const text = await file.text();
       const html = await invoke<string>('parse_markdown', { md: text });
-      setContent(html);
-      setSelectedFilePath(null);
-      setSelectedFileName(file.name);
+      
+      const droppedPath = (file as unknown as { path?: string }).path || '';
+      const newTab: TabItem = {
+        id: generateId(),
+        filePath: droppedPath,
+        fileName: file.name,
+        content: html
+      };
+
+      addTabToPane(activePaneId, newTab);
       setError('');
-      updateTitle(file.name, folderName);
     } catch {
       setError('ファイルの読み込みに失敗しました。');
     }
   };
+
+  // パンくずリスト用のファイルパス取得
+  const activePane = panes.find(p => p.id === activePaneId);
+  const activeTabForBreadcrumb = activePane?.tabs.find(t => t.id === activePane.activeTabId);
+
+  // キーボードショートカットの一元管理
+  const shortcutActions = useMemo(() => ({
+    closeActiveTab,
+    nextTab: goToNextTab,
+    prevTab: goToPrevTab,
+    goToTab: goToNthTab,
+    openFile: handleOpenFile,
+    reopenClosedTab: handleReopenClosedTab,
+    toggleSidebar: () => setIsSidebarOpen(prev => !prev),
+    openSettings: () => setIsSettingsOpen(true),
+    toggleFullscreen,
+    exitFullscreen,
+  }), [closeActiveTab, goToNextTab, goToPrevTab, goToNthTab, handleOpenFile, handleReopenClosedTab, toggleFullscreen, exitFullscreen]);
+
+  useKeyboardShortcuts({ actions: shortcutActions, isSettingsOpen });
 
   return (
     <div
@@ -501,10 +779,10 @@ function App() {
           </button>
         </div>
 
-        {selectedFileName && (
-          <div className="toolbar-breadcrumb" title={selectedFilePath || selectedFileName}>
+        {activeTabForBreadcrumb && (
+          <div className="toolbar-breadcrumb" title={activeTabForBreadcrumb.filePath}>
             {folderName && <span className="breadcrumb-folder">{folderName} / </span>}
-            <span className="breadcrumb-file">{selectedFileName}</span>
+            <span className="breadcrumb-file">{activeTabForBreadcrumb.fileName}</span>
           </div>
         )}
 
@@ -543,7 +821,7 @@ function App() {
           <Sidebar
             folderPath={folderPath}
             folderName={folderName}
-            selectedFilePath={selectedFilePath}
+            selectedFilePath={activeTabForBreadcrumb?.filePath || null}
             rootEntries={rootEntries}
             isLoadingRoot={isLoadingRoot}
             onOpenFolder={handleOpenFolder}
@@ -553,61 +831,26 @@ function App() {
           />
         )}
 
-        <main className="content-area">
-          {content ? (
-            <div
-              className="markdown-container"
-              data-theme={effectiveTheme}
-              data-color-mode={effectiveTheme}
-            >
-              {selectedFileName && (
-                <div className="document-header">
-                  <div className="document-title-row">
-                    <span className="document-title">{selectedFileName}</span>
-                  </div>
-                  {selectedFilePath && (
-                    <div className="document-path">{selectedFilePath}</div>
-                  )}
-                </div>
-              )}
-              <div 
-                className="markdown-body" 
-                onClick={handleHtmlClick}
-                dangerouslySetInnerHTML={{ __html: content }} 
-              />
-            </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">📄</div>
-              <div className="empty-state-title">ファイルが選択されていません</div>
-              <div className="empty-state-text">
-                {folderPath ? (
-                  <>左側のエクスプローラーからMarkdownファイルを選択してください。</>
-                ) : (
-                  <>
-                    「フォルダを開く」でプロジェクトフォルダを開くか、<br />
-                    Markdownファイルをドラッグ＆ドロップしてください。
-                  </>
-                )}
-              </div>
-              <div className="empty-state-actions">
-                <button
-                  type="button"
-                  className="empty-action-btn primary"
-                  onClick={handleOpenFolder}
-                >
-                  フォルダを開く
-                </button>
-                <button
-                  type="button"
-                  className="empty-action-btn secondary"
-                  onClick={handleOpenFile}
-                >
-                  ファイルを開く
-                </button>
-              </div>
-            </div>
-          )}
+        <main className="content-area panes-container">
+          {panes.map(pane => (
+            <MarkdownPane
+              key={pane.id}
+              pane={pane}
+              isActivePane={pane.id === activePaneId}
+              onFocusPane={setActivePaneId}
+              onSelectTab={handleSelectTab}
+              onCloseTab={handleCloseTab}
+              onSplitPane={panes.length < 3 ? handleSplitPane : undefined}
+              onClosePane={panes.length > 1 ? handleClosePane : undefined}
+              canSplit={panes.length < 3}
+              canClosePane={panes.length > 1}
+              effectiveTheme={effectiveTheme}
+              folderPath={folderPath}
+              onLinkClick={handleLinkClick}
+              onDropTab={handleMoveTab}
+              onDropFile={handleDropFile}
+            />
+          ))}
         </main>
       </div>
 
@@ -617,6 +860,8 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         themeMode={themeMode}
         onThemeChange={handleThemeChange}
+        autoCloseEmptyPane={autoCloseEmptyPane}
+        onAutoCloseEmptyPaneChange={handleAutoCloseEmptyPaneChange}
       />
 
       {/* ドラッグオーバーレイ */}
@@ -633,4 +878,3 @@ function App() {
 }
 
 export default App;
-

@@ -70,6 +70,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "pulldown-cmark",
+ "regex",
  "rfd 0.17.2",
  "serde",
  "serde_json",

@@ -7,6 +7,8 @@ interface SettingsModalProps {
   onClose: () => void;
   themeMode: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
+  autoCloseEmptyPane: boolean;
+  onAutoCloseEmptyPaneChange: (value: boolean) => void;
 }
 
 interface ThemeOption {
@@ -42,6 +44,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   themeMode,
   onThemeChange,
+  autoCloseEmptyPane,
+  onAutoCloseEmptyPaneChange,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -116,11 +120,89 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </section>
 
           <section className="settings-section" style={{ marginTop: '20px' }}>
+            <h3 className="settings-section-title">ペインの自動クローズ</h3>
+            <p className="settings-section-desc">
+              ペイン内の最後のファイルが閉じられたとき、そのペインも一緒に閉じるかどうかの設定です。（※ペインが2つ以上ある場合のみ有効）
+            </p>
+            <div className="theme-options-grid">
+              <button
+                type="button"
+                className={`theme-option-card ${autoCloseEmptyPane ? 'selected' : ''}`}
+                onClick={() => onAutoCloseEmptyPaneChange(true)}
+              >
+                <div className="theme-option-header">
+                  <span className="theme-option-label">自動で閉じる</span>
+                  <span className="theme-option-radio">
+                    <span className="theme-option-radio-inner" />
+                  </span>
+                </div>
+                <div className="theme-option-description">ファイルが0になったペインを自動的に終了します</div>
+              </button>
+              <button
+                type="button"
+                className={`theme-option-card ${!autoCloseEmptyPane ? 'selected' : ''}`}
+                onClick={() => onAutoCloseEmptyPaneChange(false)}
+              >
+                <div className="theme-option-header">
+                  <span className="theme-option-label">閉じない</span>
+                  <span className="theme-option-radio">
+                    <span className="theme-option-radio-inner" />
+                  </span>
+                </div>
+                <div className="theme-option-description">空のペインとして残します</div>
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-section" style={{ marginTop: '20px' }}>
             <h3 className="settings-section-title">ショートカットキー</h3>
             <p className="settings-section-desc">
-              キーボードから素早く操作できます。
+              キーボードやマウスから素早く操作できます。
             </p>
             <div className="shortcuts-list">
+              <div className="shortcut-group-title">タブ操作</div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">タブを閉じる</span>
+                <kbd className="shortcut-key">Ctrl+W</kbd>
+              </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">カーソル下のタブを閉じる</span>
+                <span className="shortcut-key-text">マウスホイールクリック</span>
+              </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">閉じたタブを復元</span>
+                <kbd className="shortcut-key">Ctrl+Shift+T</kbd>
+              </div>
+
+              <div className="shortcut-group-title">タブナビゲーション</div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">次のタブに切り替え</span>
+                <kbd className="shortcut-key">Ctrl+Tab</kbd>
+              </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">前のタブに切り替え</span>
+                <kbd className="shortcut-key">Ctrl+Shift+Tab</kbd>
+              </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">N番目のタブに切り替え</span>
+                <kbd className="shortcut-key">Ctrl+1〜9</kbd>
+              </div>
+
+              <div className="shortcut-group-title">ファイル操作</div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">ファイルを開く</span>
+                <kbd className="shortcut-key">Ctrl+O</kbd>
+              </div>
+
+              <div className="shortcut-group-title">UI操作</div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">サイドバーの表示/非表示</span>
+                <kbd className="shortcut-key">Ctrl+B</kbd>
+              </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">設定画面を開く</span>
+                <kbd className="shortcut-key">Ctrl+,</kbd>
+              </div>
               <div className="shortcut-item">
                 <span className="shortcut-action">全画面表示の切り替え</span>
                 <kbd className="shortcut-key">F11</kbd>

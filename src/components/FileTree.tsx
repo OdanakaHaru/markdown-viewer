@@ -70,6 +70,16 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         style={{ paddingLeft: `${paddingLeft}px` }}
         onClick={handleToggle}
         title={entry.path}
+        draggable={!entry.is_dir && entry.is_markdown}
+        onDragStart={(e) => {
+          if (!entry.is_dir && entry.is_markdown) {
+            e.dataTransfer.setData(
+              'application/json',
+              JSON.stringify({ type: 'file', filePath: entry.path })
+            );
+            e.dataTransfer.effectAllowed = 'copy';
+          }
+        }}
       >
         <span className="tree-arrow">
           {entry.is_dir ? (
