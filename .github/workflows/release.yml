@@ -1,0 +1,44 @@
+﻿name: Release App
+
+on:
+  push:
+    tags:
+      - 'v*' # v0.1.0 などのタグがプッシュされたときに起動
+  workflow_dispatch: # GitHubのブラウザ画面から手動ボタンで実行したい場合
+
+jobs:
+  release:
+    permissions:
+      contents: write # Releasesの作成・アップロード権限
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest] # 必要に応じて macos-latest や ubuntu-22.04 を追加可能
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri App and Create Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Markdown Viewer v__VERSION__'
+          releaseBody: 'Markdown Viewer の最新リリースです。環境に合わせたインストーラーをダウンロードしてご利用ください。'
+          releaseDraft: false
+          prerelease: false
