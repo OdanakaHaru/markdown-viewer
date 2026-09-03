@@ -19,6 +19,7 @@ export interface TabItem {
   fileName: string;    // 表示用ファイル名
   content: string;     // パースされたHTMLまたはMarkdown
   scrollTop?: number;  // ペインごとの独立したスクロール位置（任意）
+  isStandalone?: boolean; // フォルダ配下ではなく単体（D&D等）で開かれたファイルかどうか
 }
 
 export interface PaneItem {

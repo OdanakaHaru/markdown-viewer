@@ -63,7 +63,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
       if (src && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('http')) {
         invoke<string>('read_image_data_url', {
           baseFilePath: selectedFilePath,
-          baseFolderPath: folderPath,
+          baseFolderPath: activeTab?.isStandalone ? null : folderPath,
           src,
         })
           .then((dataUrl) => {
@@ -74,7 +74,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
           });
       }
     });
-  }, [sanitizedContent, selectedFilePath, folderPath]);
+  }, [sanitizedContent, selectedFilePath, folderPath, activeTab?.isStandalone]);
 
   const handleHtmlClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;

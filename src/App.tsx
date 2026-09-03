@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import 'github-markdown-css/github-markdown.css';
@@ -132,14 +132,24 @@ function App() {
     });
   }, []);
 
+  // アクティブタブが現在開いているフォルダの配下として表示すべきかどうか
+  const showFolderInBreadcrumb = Boolean(
+    folderName &&
+    folderPath &&
+    activeTab &&
+    !activeTab.isStandalone &&
+    activeTab.filePath &&
+    isSubpathOf(activeTab.filePath, folderPath)
+  );
+
   // アクティブタブ変更に応じたタイトル更新
   useEffect(() => {
     if (activeTab) {
-      updateTitle(activeTab.fileName, folderName);
+      updateTitle(activeTab.fileName, showFolderInBreadcrumb ? folderName : null);
     } else {
       updateTitle('Markdown Viewer', folderName);
     }
-  }, [activeTab, folderName, updateTitle]);
+  }, [activeTab, folderName, showFolderInBreadcrumb, updateTitle]);
 
   // アンカー位置へスムーズにスクロールする
   const scrollToAnchor = useCallback((hash: string, _paneId?: string) => {
@@ -287,7 +297,7 @@ function App() {
 
         const resolved = await invoke<ResolvedLink>('resolve_link_target', {
           baseFilePath,
-          baseFolderPath: folderPath,
+          baseFolderPath: sourceTab?.isStandalone ? null : folderPath,
           href,
         });
 
@@ -384,11 +394,79 @@ function App() {
     setIsDragging(false);
   };
 
-  // ファイル/フォルダがドロップされた時の処理
+  // アクティブペインIDの最新参照を保持（イベントリスナー用）
+  const activePaneIdRef = useRef(activePaneId);
+  useEffect(() => {
+    activePaneIdRef.current = activePaneId;
+  }, [activePaneId]);
+
+  const lastDropHandledTimeRef = useRef<number>(0);
+
+  // Tauriネイティブのファイルドロップリスナー (Windows / macOS)
+  useEffect(() => {
+    if (!appWindow) return;
+
+    let unlisten: (() => void) | undefined;
+    appWindow
+      .onDragDropEvent(async (event) => {
+        if (event.payload.type === 'over' || event.payload.type === 'enter') {
+          setIsDragging(true);
+        } else if (event.payload.type === 'leave') {
+          setIsDragging(false);
+        } else if (event.payload.type === 'drop') {
+          setIsDragging(false);
+          const paths = event.payload.paths;
+          if (!paths || paths.length === 0) return;
+
+          const path = paths[0];
+          if (!isMarkdownFile(path)) {
+            setError('Markdown (.md, .markdown) ファイルをドロップしてください。');
+            return;
+          }
+
+          lastDropHandledTimeRef.current = Date.now();
+
+          try {
+            const [filePath, text] = await invoke<[string, string]>('read_md_file', { path });
+            const filename = getPathBaseName(filePath) || 'Untitled';
+
+            const newTab: TabItem = {
+              id: generateId(),
+              filePath,
+              fileName: filename,
+              content: text,
+              isStandalone: true,
+            };
+
+            addTabToPane(activePaneIdRef.current, newTab);
+            setError('');
+          } catch (err: unknown) {
+            setError(typeof err === 'string' ? err : 'ファイルの読み込みに失敗しました。');
+          }
+        }
+      })
+      .then((fn) => {
+        unlisten = fn;
+      })
+      .catch((err) => {
+        console.error('onDragDropEvent の登録に失敗:', err);
+      });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [addTabToPane]);
+
+  // ファイル/フォルダがドロップされた時の処理 (HTML5フォールバック)
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+
+    // ネイティブ側で既に処理された直後の場合は重複防止
+    if (Date.now() - lastDropHandledTimeRef.current < 1000) {
+      return;
+    }
 
     const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
@@ -409,6 +487,7 @@ function App() {
         filePath: droppedPath,
         fileName: file.name,
         content: html,
+        isStandalone: true,
       };
 
       addTabToPane(activePaneId, newTab);
@@ -487,7 +566,7 @@ function App() {
 
         {activeTab && (
           <div className="toolbar-breadcrumb" title={activeTab.filePath}>
-            {folderName && <span className="breadcrumb-folder">{folderName} / </span>}
+            {showFolderInBreadcrumb && <span className="breadcrumb-folder">{folderName} / </span>}
             <span className="breadcrumb-file">{activeTab.fileName}</span>
           </div>
         )}
@@ -527,7 +606,7 @@ function App() {
           <Sidebar
             folderPath={folderPath}
             folderName={folderName}
-            selectedFilePath={activeTab?.filePath || null}
+            selectedFilePath={activeTab?.isStandalone ? null : (activeTab?.filePath || null)}
             rootEntries={rootEntries}
             isLoadingRoot={isLoadingRoot}
             onOpenFolder={handleOpenFolder}

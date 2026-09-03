@@ -264,13 +264,16 @@ fn resolve_link_target(
         let is_root_slash = decoded_path.starts_with('/') || decoded_path.starts_with('\\');
         let rel_trimmed = decoded_path.trim_start_matches(|c| c == '/' || c == '\\');
 
+        let clean_base_file = base_file_path.as_ref().filter(|s| !s.trim().is_empty());
+        let clean_base_folder = base_folder_path.as_ref().filter(|s| !s.trim().is_empty());
+
         let base_dir = if is_root_slash {
-            base_folder_path.as_ref().map(PathBuf::from).or_else(|| {
-                base_file_path.as_ref().and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf()))
+            clean_base_folder.map(PathBuf::from).or_else(|| {
+                clean_base_file.and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf()))
             })
         } else {
-            base_file_path.as_ref().and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf())).or_else(|| {
-                base_folder_path.as_ref().map(PathBuf::from)
+            clean_base_file.and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf())).or_else(|| {
+                clean_base_folder.map(PathBuf::from)
             })
         };
 
@@ -385,6 +388,9 @@ fn read_image_data_url(
                 && bytes[0].is_ascii_alphabetic())
     };
 
+    let clean_base_file = base_file_path.filter(|s| !s.trim().is_empty());
+    let clean_base_folder = base_folder_path.filter(|s| !s.trim().is_empty());
+
     let candidate_path = if is_absolute {
         normalize_path(Path::new(&decoded_path))
     } else {
@@ -392,16 +398,16 @@ fn read_image_data_url(
         let rel_trimmed = decoded_path.trim_start_matches(|c| c == '/' || c == '\\');
 
         let base_dir = if is_root_slash {
-            base_folder_path.as_ref().map(PathBuf::from).or_else(|| {
-                base_file_path
+            clean_base_folder.as_ref().map(PathBuf::from).or_else(|| {
+                clean_base_file
                     .as_ref()
                     .and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf()))
             })
         } else {
-            base_file_path
+            clean_base_file
                 .as_ref()
                 .and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf()))
-                .or_else(|| base_folder_path.as_ref().map(PathBuf::from))
+                .or_else(|| clean_base_folder.as_ref().map(PathBuf::from))
         };
 
         if let Some(base) = base_dir {
@@ -411,29 +417,64 @@ fn read_image_data_url(
         }
     };
 
-    if !candidate_path.exists() {
-        return Err(format!(
+    // 画像ファイルの解決（直接指定 -> フォールバック候補順に探索）
+    let final_image_path = if candidate_path.exists() && candidate_path.is_file() {
+        Some(candidate_path.clone())
+    } else {
+        // Markdownファイルの親ディレクトリを基準にフォールバック探索
+        let file_dir = clean_base_file
+            .as_ref()
+            .and_then(|fp| Path::new(fp).parent().map(|p| p.to_path_buf()))
+            .or_else(|| clean_base_folder.as_ref().map(PathBuf::from));
+
+        if let Some(dir) = file_dir {
+            let file_name = Path::new(&decoded_path)
+                .file_name()
+                .map(|f| f.to_string_lossy().into_owned());
+
+            if let Some(fname) = file_name {
+                let md_stem = clean_base_file
+                    .as_ref()
+                    .and_then(|fp| Path::new(fp).file_stem().map(|s| s.to_string_lossy().into_owned()));
+
+                let mut fallbacks = vec![
+                    dir.join(&fname),
+                    dir.join("images").join(&fname),
+                    dir.join("assets").join(&fname),
+                    dir.join("media").join(&fname),
+                    dir.join("img").join(&fname),
+                ];
+
+                if let Some(stem) = md_stem {
+                    fallbacks.push(dir.join(format!("{}_files", stem)).join(&fname));
+                    fallbacks.push(dir.join(&stem).join(&fname));
+                }
+
+                fallbacks.into_iter().find(|p| p.exists() && p.is_file())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+
+    let actual_path = final_image_path.ok_or_else(|| {
+        format!(
             "画像ファイルが見つかりません: {}",
             candidate_path.to_string_lossy()
-        ));
-    }
+        )
+    })?;
 
-    if !candidate_path.is_file() {
-        return Err(format!(
-            "指定されたパスはファイルではありません: {}",
-            candidate_path.to_string_lossy()
-        ));
-    }
-
-    let bytes = fs::read(&candidate_path).map_err(|e| {
+    let bytes = fs::read(&actual_path).map_err(|e| {
         format!(
             "画像の読み込みに失敗しました ({}): {}",
-            candidate_path.to_string_lossy(),
+            actual_path.to_string_lossy(),
             e
         )
     })?;
 
-    let mime = get_image_mime_type(&candidate_path);
+    let mime = get_image_mime_type(&actual_path);
     let encoded = base64_encode(&bytes);
 
     Ok(format!("data:{};base64,{}", mime, encoded))
@@ -503,7 +544,47 @@ mod tests {
         assert!(!res.target.contains("ç®¡"));
     }
 
+    #[test]
+    fn test_read_image_data_url_with_fallback() {
+        let temp_dir = std::env::temp_dir().join(format!("md_viewer_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let images_dir = temp_dir.join("images");
+        fs::create_dir_all(&images_dir).unwrap();
 
+        let md_file = temp_dir.join("doc.md");
+        fs::write(&md_file, "# Test").unwrap();
+
+        // 1x1 透明PNGデータ
+        let dummy_png = [
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+            0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+            0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
+            0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        ];
+        let img_path = images_dir.join("sample.png");
+        fs::write(&img_path, dummy_png).unwrap();
+
+        // 1. images/sample.png での直接探索
+        let res1 = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "images/sample.png".to_string(),
+        );
+        assert!(res1.is_ok());
+        assert!(res1.unwrap().starts_with("data:image/png;base64,"));
+
+        // 2. sample.png のみ指定でも images/ 配下のフォールバックで発見できること
+        let res2 = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "sample.png".to_string(),
+        );
+        assert!(res2.is_ok());
+        assert!(res2.unwrap().starts_with("data:image/png;base64,"));
+
+        // クリーンアップ
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
 }
 
 
