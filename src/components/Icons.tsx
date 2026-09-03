@@ -143,5 +143,40 @@ export const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+export const VscodeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M11.5 1.5 4.8 7.3 1.8 4.9.5 5.8 3.2 8 .5 10.2l1.3.9 3-2.4 6.7 5.8 3.5-1.7V3.2L11.5 1.5z"
+      fill="#007ACC"
+    />
+    <path
+      d="m11.5 1.5 3.5 1.7v9.6l-3.5 1.7V1.5z"
+      fill="#1F8AD2"
+    />
+    <path
+      d="M11.5 5.2 7.8 8l3.7 2.8V5.2z"
+      fill="#0065A9"
+    />
+  </svg>
+);
+
+export const NotepadIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M3 1.5A1.5 1.5 0 0 1 4.5 0h7A1.5 1.5 0 0 1 13 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 14.5v-13zm1.5 0v13h7v-13h-7zM5 3.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 3.75zm0 3a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 6.75zm0 3a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 9.75zm0 3a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 0 1.5h-3A.75.75 0 0 1 5 12.75z"/>
+  </svg>
+);
+
+export const ExternalAppIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path fillRule="evenodd" d="M10.604 1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.75.75 0 0 1-1.06-1.06l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1zM3.75 2A1.75 1.75 0 0 0 2 3.75v8.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0 0 14 12.25v-3.5a.75.75 0 0 0-1.5 0v3.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-8.5a.25.25 0 0 1 .25-.25h3.5a.75.75 0 0 0 0-1.5h-3.5z"/>
+  </svg>
+);
+
+export const ExplorerIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.828l-.854-.853A1.75 1.75 0 0 0 5.737 1.637l-.238-.002H1.75zM1.5 2.75a.25.25 0 0 1 .25-.25h3.749c.2 0 .391.079.53.22l.854.853a.25.25 0 0 0 .177.073h7.19a.25.25 0 0 1 .25.25v8.5a.25.25 0 0 1-.25.25H1.75a.25.25 0 0 1-.25-.25V2.75z"/>
+  </svg>
+);
+
 
 

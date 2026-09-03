@@ -16,6 +16,7 @@ interface FileTreeItemProps {
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
   collapseAllTrigger: number;
+  onContextMenu?: (e: React.MouseEvent, entry: FileEntry) => void;
 }
 
 export const FileTreeItem: React.FC<FileTreeItemProps> = ({
@@ -24,6 +25,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
   selectedPath,
   onSelectFile,
   collapseAllTrigger,
+  onContextMenu,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [children, setChildren] = useState<FileEntry[] | null>(null);
@@ -69,6 +71,11 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         } ${!entry.is_dir && !entry.is_markdown ? 'non-markdown' : ''}`}
         style={{ paddingLeft: `${paddingLeft}px` }}
         onClick={handleToggle}
+        onContextMenu={(e) => {
+          if (onContextMenu) {
+            onContextMenu(e, entry);
+          }
+        }}
         title={entry.path}
         draggable={!entry.is_dir && entry.is_markdown}
         onDragStart={(e) => {
@@ -122,6 +129,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
                 selectedPath={selectedPath}
                 onSelectFile={onSelectFile}
                 collapseAllTrigger={collapseAllTrigger}
+                onContextMenu={onContextMenu}
               />
             ))
           ) : children && children.length === 0 && !isLoading ? (

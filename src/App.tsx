@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import 'github-markdown-css/github-markdown.css';
 import './App.css';
 import type { SidebarView } from './types';
@@ -7,6 +6,9 @@ import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { QuickOpenModal } from './components/QuickOpenModal';
 import { MarkdownPane } from './components/MarkdownPane';
+import { ContextMenu } from './components/ContextMenu';
+import { Toolbar } from './components/Toolbar';
+import { CloseIcon } from './components/Icons';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useFullscreen } from './hooks/useFullscreen';
@@ -16,21 +18,9 @@ import { useActiveFileWatcher } from './hooks/useActiveFileWatcher';
 import { useToc } from './hooks/useToc';
 import { useLinkNavigation } from './hooks/useLinkNavigation';
 import { useFileOperations } from './hooks/useFileOperations';
-import { isSubpathOf } from './utils/path';
-import {
-  SidebarToggleIcon,
-  FolderOpenBtnIcon,
-  MarkdownFileIcon,
-  SettingsIcon,
-  FullscreenIcon,
-  FullscreenExitIcon,
-  PrintIcon,
-  TocIcon,
-  SearchIcon,
-} from './components/Icons';
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-const appWindow = isTauri ? getCurrentWebviewWindow() : null;
+import { useCustomApps } from './hooks/useCustomApps';
+import { useWindowTitle } from './hooks/useWindowTitle';
+import { useAppContextMenu } from './hooks/useAppContextMenu';
 
 function App() {
   const [error, setError] = useState('');
@@ -60,6 +50,8 @@ function App() {
     handleSelectTab,
     handleClosePane,
     handleCloseTab,
+    handleCloseOtherTabs,
+    handleCloseTabsToRight,
     handleSplitPane,
     handleMoveTab,
     handleReopenClosedTab,
@@ -69,6 +61,9 @@ function App() {
     closeActiveTab,
     reloadTabContent,
   } = usePanes();
+
+  // --- カスタム外部エディタ設定 ---
+  const { customApps, handleCustomAppsChange } = useCustomApps();
 
   // --- 検索バー状態 ---
   const [searchPaneId, setSearchPaneId] = useState<string | null>(null);
@@ -123,40 +118,36 @@ function App() {
   // --- 印刷 / PDFエクスポート ---
   const handlePrintDocument = useCallback(() => {
     if (!activeTab) return;
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 50);
   }, [activeTab]);
 
+  // --- コンテキストメニュー管理 ---
+  const {
+    contextMenu,
+    closeContextMenu,
+    handleContextMenuFile,
+    handleContextMenuTab,
+    handleContextMenuPane,
+  } = useAppContextMenu({
+    customApps,
+    folderPath,
+    handleCloseTab,
+    handleCloseOtherTabs,
+    handleCloseTabsToRight,
+    handlePrintDocument,
+    onError: setError,
+  });
+
   // --- ウィンドウタイトルの更新 ---
-  const updateTitle = useCallback((filename: string, dirName?: string | null) => {
-    const title = dirName
-      ? `${filename} - ${dirName} - Markdown Viewer`
-      : `${filename} - Markdown Viewer`;
-    document.title = title;
-    appWindow?.setTitle(title).catch((err) => {
-      console.error('ウィンドウタイトルの更新に失敗:', err);
-    });
-  }, []);
-
-  const isTabInOpenedFolder = Boolean(
-    folderName &&
-    folderPath &&
-    activeTab &&
-    !activeTab.isStandalone &&
-    activeTab.filePath &&
-    isSubpathOf(activeTab.filePath, folderPath)
-  );
-
-  useEffect(() => {
-    if (activeTab) {
-      updateTitle(activeTab.fileName, isTabInOpenedFolder ? folderName : null);
-    } else {
-      updateTitle('Markdown Viewer', folderName);
-    }
-  }, [activeTab, folderName, isTabInOpenedFolder, updateTitle]);
+  useWindowTitle({
+    activeTab,
+    folderName,
+    folderPath,
+  });
 
   // --- ファイル操作 & ナビゲーション ---
-  // 循環参照を避けるため、まず scrollToAnchor と handleLinkClick 用のフックを生成
-  // （onSelectFile は useFileOperations から提供）
   const handleSelectFileRef = useRef<
     (path: string, initialHash?: string | null, targetPaneId?: string) => Promise<void>
   >(async () => {});
@@ -250,6 +241,25 @@ function App() {
     isQuickOpenOpen,
   });
 
+  // --- ツールバー用アクション ---
+  const handleToggleExplorer = useCallback(() => {
+    if (isSidebarOpen && sidebarView === 'explorer') {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+      setSidebarView('explorer');
+    }
+  }, [isSidebarOpen, sidebarView]);
+
+  const handleToggleToc = useCallback(() => {
+    if (isSidebarOpen && sidebarView === 'toc') {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+      setSidebarView('toc');
+    }
+  }, [isSidebarOpen, sidebarView]);
+
   return (
     <div
       className="container"
@@ -260,115 +270,48 @@ function App() {
       onDrop={handleDrop}
     >
       {/* ツールバー */}
-      <header className="toolbar">
-        <div className="toolbar-left">
-          <button
-            type="button"
-            className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'explorer' ? 'active' : ''}`}
-            onClick={() => {
-              if (isSidebarOpen && sidebarView === 'explorer') {
-                setIsSidebarOpen(false);
-              } else {
-                setIsSidebarOpen(true);
-                setSidebarView('explorer');
-              }
-            }}
-            title={
-              isSidebarOpen && sidebarView === 'explorer'
-                ? 'サイドバーを非表示 (Ctrl+B)'
-                : 'エクスプローラーを表示 (Ctrl+B)'
-            }
-          >
-            <SidebarToggleIcon />
-          </button>
-          <button
-            type="button"
-            className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'toc' ? 'active' : ''}`}
-            onClick={() => {
-              if (isSidebarOpen && sidebarView === 'toc') {
-                setIsSidebarOpen(false);
-              } else {
-                setIsSidebarOpen(true);
-                setSidebarView('toc');
-              }
-            }}
-            title={isSidebarOpen && sidebarView === 'toc' ? '目次を非表示' : '目次 / アウトラインを表示'}
-          >
-            <TocIcon />
-          </button>
-          <button
-            type="button"
-            className="toolbar-btn toolbar-btn-folder"
-            onClick={handleOpenFolder}
-            title="フォルダを開く"
-          >
-            <FolderOpenBtnIcon className="btn-icon" />
-            <span className="toolbar-btn-text">フォルダを開く</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-btn toolbar-btn-file"
-            onClick={handleOpenFile}
-            title="ファイルを開く"
-          >
-            <MarkdownFileIcon className="btn-icon" />
-            <span className="toolbar-btn-text">ファイルを開く</span>
-          </button>
-        </div>
-
-        {/* クイックオープン起動ボタン (VS Code風検索バー) */}
-        <div className="toolbar-center">
-          <button
-            type="button"
-            className="toolbar-quick-open-btn"
-            onClick={handleOpenQuickOpen}
-            title="ファイルをクイックオープン (Ctrl+P)"
-          >
-            <SearchIcon className="quick-open-btn-icon" />
-            <span className="quick-open-btn-label">
-              {folderName ? `${folderName} を検索...` : 'ファイルをクイックオープン...'}
-            </span>
-            <kbd className="quick-open-btn-kbd">Ctrl+P</kbd>
-          </button>
-        </div>
-
-        <div className="toolbar-right">
-          <button
-            type="button"
-            className="toolbar-icon-btn"
-            onClick={handlePrintDocument}
-            title={activeTab ? '印刷 / PDF保存 (Ctrl+Shift+P)' : 'タブが開かれていません'}
-            disabled={!activeTab}
-          >
-            <PrintIcon />
-          </button>
-          <button
-            type="button"
-            className={`toolbar-icon-btn ${isFullscreen ? 'active' : ''}`}
-            onClick={toggleFullscreen}
-            title={isFullscreen ? '全画面表示を解除 (F11)' : '全画面表示 (F11)'}
-          >
-            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-          </button>
-          <button
-            type="button"
-            className="toolbar-icon-btn"
-            onClick={() => setIsSettingsOpen(true)}
-            title={`設定 (現在のテーマ: ${
-              themeMode === 'system'
-                ? `システム連動 [${effectiveTheme === 'dark' ? 'ダーク' : 'ライト'}]`
-                : themeMode === 'dark'
-                ? 'ダークモード'
-                : 'ライトモード'
-            })`}
-          >
-            <SettingsIcon />
-          </button>
-        </div>
-      </header>
+      <Toolbar
+        isSidebarOpen={isSidebarOpen}
+        sidebarView={sidebarView}
+        onToggleExplorer={handleToggleExplorer}
+        onToggleToc={handleToggleToc}
+        onOpenFolder={handleOpenFolder}
+        onOpenFile={handleOpenFile}
+        onOpenQuickOpen={handleOpenQuickOpen}
+        folderName={folderName}
+        hasActiveTab={Boolean(activeTab)}
+        onPrint={handlePrintDocument}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        themeMode={themeMode}
+        effectiveTheme={effectiveTheme}
+      />
 
       {/* エラーバー */}
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <div className="error" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title="閉じる"
+            aria-label="エラーを閉じる"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      )}
 
       {/* メインレイアウト */}
       <div className="main-layout">
@@ -389,6 +332,7 @@ function App() {
             activeHeadingId={activeHeadingId}
             onSelectHeading={handleSelectHeading}
             hasActiveTab={Boolean(activeTab)}
+            onContextMenuFile={handleContextMenuFile}
           />
         )}
 
@@ -412,6 +356,8 @@ function App() {
               onDropFile={handleDropFile}
               isSearchOpen={searchPaneId === pane.id}
               onCloseSearch={handleCloseSearch}
+              onContextMenuTab={handleContextMenuTab}
+              onContextMenuPane={handleContextMenuPane}
             />
           ))}
         </main>
@@ -425,6 +371,8 @@ function App() {
         onThemeChange={handleThemeChange}
         autoCloseEmptyPane={autoCloseEmptyPane}
         onAutoCloseEmptyPaneChange={handleAutoCloseEmptyPaneChange}
+        customApps={customApps}
+        onCustomAppsChange={handleCustomAppsChange}
       />
 
       {/* クイックオープンモーダル (Ctrl+P) */}
@@ -438,6 +386,9 @@ function App() {
           openTabs={allOpenTabs}
         />
       )}
+
+      {/* グローバル右クリックコンテキストメニュー */}
+      <ContextMenu state={contextMenu} onClose={closeContextMenu} />
 
       {/* ドラッグオーバーレイ */}
       {isDragging && (

@@ -14,6 +14,7 @@ interface TabBarProps {
   canClosePane: boolean;
   isActivePane: boolean;
   onFocusPane: () => void;
+  onContextMenuTab?: (e: React.MouseEvent, tab: TabItem, paneId: string) => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -28,6 +29,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   canClosePane,
   isActivePane,
   onFocusPane,
+  onContextMenuTab,
 }) => {
   return (
     <div className={`tab-bar ${isActivePane ? 'active-pane' : ''}`} onClick={onFocusPane}>
@@ -48,6 +50,12 @@ export const TabBar: React.FC<TabBarProps> = ({
               e.stopPropagation();
               onFocusPane();
               onSelectTab(tab.id);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onFocusPane();
+              onContextMenuTab?.(e, tab, paneId);
             }}
             onMouseDown={(e) => {
               // マウス中ボタン（ホイールクリック）のデフォルト動作を抑制

@@ -112,6 +112,46 @@ export function usePanes() {
     [panes, autoCloseEmptyPane, handleClosePane]
   );
 
+  // 他のタブをすべて閉じる
+  const handleCloseOtherTabs = useCallback((paneId: string, tabId: string) => {
+    setPanes((prev) =>
+      prev.map((pane) => {
+        if (pane.id === paneId) {
+          const targetTab = pane.tabs.find((t) => t.id === tabId);
+          return {
+            ...pane,
+            tabs: targetTab ? [targetTab] : [],
+            activeTabId: targetTab ? targetTab.id : null,
+          };
+        }
+        return pane;
+      })
+    );
+  }, []);
+
+  // 右側のタブを閉じる
+  const handleCloseTabsToRight = useCallback((paneId: string, tabId: string) => {
+    setPanes((prev) =>
+      prev.map((pane) => {
+        if (pane.id === paneId) {
+          const targetIndex = pane.tabs.findIndex((t) => t.id === tabId);
+          if (targetIndex === -1) return pane;
+          const remainingTabs = pane.tabs.slice(0, targetIndex + 1);
+          let newActiveId = pane.activeTabId;
+          if (!remainingTabs.some((t) => t.id === newActiveId)) {
+            newActiveId = tabId;
+          }
+          return {
+            ...pane,
+            tabs: remainingTabs,
+            activeTabId: newActiveId,
+          };
+        }
+        return pane;
+      })
+    );
+  }, []);
+
   // ペインを右に分割
   const handleSplitPane = useCallback(
     (paneId: string) => {
@@ -298,6 +338,8 @@ export function usePanes() {
     handleSelectTab,
     handleClosePane,
     handleCloseTab,
+    handleCloseOtherTabs,
+    handleCloseTabsToRight,
     handleSplitPane,
     handleMoveTab,
     handleReopenClosedTab,

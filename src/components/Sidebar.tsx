@@ -26,6 +26,7 @@ interface SidebarProps {
   activeHeadingId: string | null;
   onSelectHeading: (id: string) => void;
   hasActiveTab: boolean;
+  onContextMenuFile?: (e: React.MouseEvent, entry: FileEntry) => void;
 }
 
 const MIN_SIDEBAR_WIDTH = 180;
@@ -48,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeHeadingId,
   onSelectHeading,
   hasActiveTab,
+  onContextMenuFile,
 }) => {
   const [collapseAllTrigger, setCollapseAllTrigger] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
@@ -204,6 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   selectedPath={selectedFilePath}
                   onSelectFile={onSelectFile}
                   collapseAllTrigger={collapseAllTrigger}
+                  onContextMenu={onContextMenuFile}
                 />
               ))}
             </div>

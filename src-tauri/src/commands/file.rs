@@ -93,3 +93,195 @@ pub fn read_md_file(path: String) -> Result<(String, String), String> {
         Err(e) => Err(e.to_string()),
     }
 }
+
+/// 指定した外部アプリケーション（VS Code、メモ帳、既定のアプリ、カスタムアプリ）でファイルまたはフォルダを開く
+#[tauri::command]
+pub fn open_in_app(
+    path: String,
+    app_type: String,
+    custom_path: Option<String>,
+) -> Result<(), String> {
+    let target = Path::new(&path);
+    if !target.exists() {
+        return Err(format!("指定されたパスが見つかりません: {}", path));
+    }
+
+    match app_type.as_str() {
+        "vscode" => open_with_vscode(&path),
+        "notepad" => open_with_notepad(&path),
+        "default" => open::that_detached(&path)
+            .map_err(|e| format!("既定のアプリケーションの起動に失敗しました: {}", e)),
+        "custom" => {
+            if let Some(exe) = custom_path.filter(|s| !s.trim().is_empty()) {
+                let mut cmd = std::process::Command::new(&exe);
+                cmd.arg(&path);
+                cmd.spawn()
+                    .map(|_| ())
+                    .map_err(|e| format!("カスタムエディタの起動に失敗しました ({}): {}", exe, e))
+            } else {
+                Err("カスタムエディタの実行パスが設定されていません".to_string())
+            }
+        }
+        unknown => Err(format!("不明なアプリケーション指定です: {}", unknown)),
+    }
+}
+
+/// OSのエクスプローラー／ファイルマネージャーで対象ファイルまたはフォルダを表示する
+#[tauri::command]
+pub fn reveal_in_explorer(path: String) -> Result<(), String> {
+    let target = Path::new(&path);
+    if !target.exists() {
+        return Err(format!("指定されたパスが見つかりません: {}", path));
+    }
+
+    #[cfg(windows)]
+    {
+        let mut cmd = std::process::Command::new("explorer");
+        if target.is_dir() {
+            cmd.arg(&path);
+        } else {
+            // ファイルの場合は選択状態で開く
+            cmd.arg(format!("/select,{}", path));
+        }
+        cmd.spawn()
+            .map(|_| ())
+            .map_err(|e| format!("エクスプローラーの起動に失敗しました: {}", e))
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("Finder の起動に失敗しました: {}", e))
+    }
+
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let folder = if target.is_dir() {
+            target
+        } else {
+            target.parent().unwrap_or(target)
+        };
+        std::process::Command::new("xdg-open")
+            .arg(folder)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("ファイルマネージャーの起動に失敗しました: {}", e))
+    }
+}
+
+fn open_with_vscode(path: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use std::path::PathBuf;
+        let mut candidate_paths: Vec<PathBuf> = Vec::new();
+
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            candidate_paths.push(
+                PathBuf::from(local_app_data)
+                    .join("Programs")
+                    .join("Microsoft VS Code")
+                    .join("Code.exe"),
+            );
+        }
+        if let Ok(prog_files) = std::env::var("ProgramFiles") {
+            candidate_paths.push(
+                PathBuf::from(prog_files)
+                    .join("Microsoft VS Code")
+                    .join("Code.exe"),
+            );
+        }
+        if let Ok(prog_files_x86) = std::env::var("ProgramFiles(x86)") {
+            candidate_paths.push(
+                PathBuf::from(prog_files_x86)
+                    .join("Microsoft VS Code")
+                    .join("Code.exe"),
+            );
+        }
+
+        for exe in candidate_paths {
+            if exe.exists() {
+                return std::process::Command::new(exe)
+                    .arg(path)
+                    .spawn()
+                    .map(|_| ())
+                    .map_err(|e| format!("VS Code の起動に失敗しました: {}", e));
+            }
+        }
+
+        // 直接の Code.exe が見当たらない場合、PATH の code (code.cmd) を起動
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        let status = std::process::Command::new("cmd")
+            .creation_flags(CREATE_NO_WINDOW)
+            .args(["/c", "code", path])
+            .spawn();
+
+        match status {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!(
+                "VS Code の起動に失敗しました。VS Code がインストールされ、PATH に登録されていることを確認してください: {}",
+                e
+            )),
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: open -a "Visual Studio Code" または code
+        let mac_res = std::process::Command::new("open")
+            .args(["-a", "Visual Studio Code", path])
+            .spawn();
+        if mac_res.is_ok() {
+            return Ok(());
+        }
+        std::process::Command::new("code")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("VS Code の起動に失敗しました: {}", e))
+    }
+
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        std::process::Command::new("code")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("VS Code の起動に失敗しました: {}", e))
+    }
+}
+
+fn open_with_notepad(path: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        std::process::Command::new("notepad.exe")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("メモ帳の起動に失敗しました: {}", e))
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .args(["-a", "TextEdit", path])
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("TextEdit の起動に失敗しました: {}", e))
+    }
+
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        // Linux: gedit や xdg-open フォールバック
+        let gedit_res = std::process::Command::new("gedit").arg(path).spawn();
+        if gedit_res.is_ok() {
+            return Ok(());
+        }
+        open::that_detached(path).map_err(|e| format!("エディタの起動に失敗しました: {}", e))
+    }
+}

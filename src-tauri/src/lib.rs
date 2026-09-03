@@ -17,6 +17,8 @@ pub fn run() {
             commands::file::open_folder,
             commands::file::read_directory,
             commands::file::read_md_file,
+            commands::file::open_in_app,
+            commands::file::reveal_in_explorer,
             commands::link::resolve_link_target,
             commands::link::open_external,
             commands::image::read_image_data_url,
@@ -222,5 +224,53 @@ mod tests {
         assert_eq!(files[1].relative_path, "sub/child.markdown");
 
         let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_open_in_app_errors() {
+        use crate::commands::file::open_in_app;
+
+        // 存在しないパス
+        let res_nonexistent = open_in_app(
+            "C:\\nonexistent_file_123456789.md".to_string(),
+            "vscode".to_string(),
+            None,
+        );
+        assert!(res_nonexistent.is_err());
+        assert!(res_nonexistent.unwrap_err().contains("見つかりません"));
+
+        // 存在するテンポラリファイルを作成
+        let temp_dir = std::env::temp_dir().join(format!(
+            "md_viewer_open_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_dir).unwrap();
+        let test_file = temp_dir.join("test.md");
+        fs::write(&test_file, "# Test").unwrap();
+        let path_str = test_file.to_string_lossy().into_owned();
+
+        // 不明なアプリケーション種別
+        let res_unknown = open_in_app(path_str.clone(), "unknown_app".to_string(), None);
+        assert!(res_unknown.is_err());
+        assert!(res_unknown.unwrap_err().contains("不明なアプリケーション"));
+
+        // カスタムエディタでパスが空の場合
+        let res_empty_custom = open_in_app(path_str, "custom".to_string(), Some("".to_string()));
+        assert!(res_empty_custom.is_err());
+        assert!(res_empty_custom.unwrap_err().contains("設定されていません"));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_reveal_in_explorer_nonexistent() {
+        use crate::commands::file::reveal_in_explorer;
+
+        let res = reveal_in_explorer("C:\\nonexistent_dir_123456789".to_string());
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("見つかりません"));
     }
 }

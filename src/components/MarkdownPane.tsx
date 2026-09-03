@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import DOMPurify from 'dompurify';
-import type { PaneItem } from '../types';
+import type { PaneItem, TabItem } from '../types';
 import { TabBar } from './TabBar';
 import { SearchBar } from './SearchBar';
 
@@ -22,6 +22,8 @@ interface MarkdownPaneProps {
   onDropFile: (filePath: string, targetPaneId: string) => void;
   isSearchOpen?: boolean;
   onCloseSearch?: () => void;
+  onContextMenuTab?: (e: React.MouseEvent, tab: TabItem, paneId: string) => void;
+  onContextMenuPane?: (e: React.MouseEvent, activeTab: TabItem | null) => void;
 }
 
 export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
@@ -41,6 +43,8 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   onDropFile,
   isSearchOpen = false,
   onCloseSearch,
+  onContextMenuTab,
+  onContextMenuPane,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId);
@@ -293,6 +297,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
         canClosePane={canClosePane}
         isActivePane={isActivePane}
         onFocusPane={() => onFocusPane(pane.id)}
+        onContextMenuTab={onContextMenuTab}
       />
       <div className="pane-content">
         {activeTab ? (
@@ -300,6 +305,11 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
             className="markdown-container"
             data-theme={effectiveTheme}
             data-color-mode={effectiveTheme}
+            onContextMenu={(e) => {
+              if (onContextMenuPane) {
+                onContextMenuPane(e, activeTab);
+              }
+            }}
           >
             {selectedFileName && (
               <div className="document-header">

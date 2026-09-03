@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import type { ThemeMode } from '../types';
-import { SunIcon, MoonIcon, MonitorIcon, CloseIcon } from './Icons';
+import { open } from '@tauri-apps/plugin-dialog';
+import type { ThemeMode, CustomApp } from '../types';
+import { SunIcon, MoonIcon, MonitorIcon, CloseIcon, FolderOpenBtnIcon } from './Icons';
+import { generateId } from '../utils/id';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -9,6 +11,8 @@ interface SettingsModalProps {
   onThemeChange: (theme: ThemeMode) => void;
   autoCloseEmptyPane: boolean;
   onAutoCloseEmptyPaneChange: (value: boolean) => void;
+  customApps: CustomApp[];
+  onCustomAppsChange: (apps: CustomApp[]) => void;
 }
 
 interface ThemeOption {
@@ -46,8 +50,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onThemeChange,
   autoCloseEmptyPane,
   onAutoCloseEmptyPaneChange,
+  customApps,
+  onCustomAppsChange,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBrowseCustomEditor = async (appId: string) => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: 'カスタムエディタの実行ファイルを選択',
+      });
+      if (typeof selected === 'string') {
+        const newApps = customApps.map((app) => 
+          app.id === appId ? { ...app, path: selected } : app
+        );
+        onCustomAppsChange(newApps);
+      }
+    } catch (err) {
+      console.error('Failed to open file dialog for custom editor:', err);
+    }
+  };
+
+  const handleAddApp = () => {
+    onCustomAppsChange([
+      ...customApps,
+      { id: generateId(), name: '新しいアプリ', appType: 'custom', path: '' }
+    ]);
+  };
+
+  const handleRemoveApp = (appId: string) => {
+    onCustomAppsChange(customApps.filter(app => app.id !== appId));
+  };
+
+  const handleUpdateApp = (appId: string, updates: Partial<CustomApp>) => {
+    onCustomAppsChange(customApps.map(app => 
+      app.id === appId ? { ...app, ...updates } : app
+    ));
+  };
 
   // ESCキーで閉じる
   useEffect(() => {
@@ -150,6 +191,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </span>
                 </div>
                 <div className="theme-option-description">空のペインとして残します</div>
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-section" style={{ marginTop: '20px' }}>
+            <h3 className="settings-section-title">外部エディタ設定（他のアプリで開く）</h3>
+            <p className="settings-section-desc">
+              右クリックメニューの「他のアプリで開く」に表示されるアプリケーションを管理できます。「メモ帳で開く」と「既定のアプリで開く」は常に表示されます。
+            </p>
+            <div className="custom-apps-list">
+              {customApps.map((app) => (
+                <div key={app.id} className="custom-app-item" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="custom-editor-input"
+                      placeholder="メニュー表示名 (例: Cursor)"
+                      value={app.name}
+                      onChange={(e) => handleUpdateApp(app.id, { name: e.target.value })}
+                      style={{ flex: 1, marginRight: '10px' }}
+                    />
+                    <button
+                      type="button"
+                      className="custom-editor-clear-btn"
+                      onClick={() => handleRemoveApp(app.id)}
+                      title="削除"
+                    >
+                      削除
+                    </button>
+                  </div>
+                  {app.appType === 'custom' && (
+                    <div className="custom-editor-input-group" style={{ margin: 0 }}>
+                      <input
+                        type="text"
+                        className="custom-editor-input"
+                        placeholder="例: C:\Program Files\Cursor\Cursor.exe"
+                        value={app.path || ''}
+                        onChange={(e) => handleUpdateApp(app.id, { path: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="custom-editor-browse-btn"
+                        onClick={() => handleBrowseCustomEditor(app.id)}
+                        title="実行ファイルを参照"
+                      >
+                        <FolderOpenBtnIcon className="btn-icon" />
+                        <span>参照...</span>
+                      </button>
+                    </div>
+                  )}
+                  {app.appType === 'vscode' && (
+                    <div style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>
+                      ※VS Code は自動的にインストール先を検出します。
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="custom-editor-browse-btn"
+                style={{ width: '100%', justifyContent: 'center', marginTop: '4px' }}
+                onClick={handleAddApp}
+              >
+                + 新しいアプリを追加
               </button>
             </div>
           </section>

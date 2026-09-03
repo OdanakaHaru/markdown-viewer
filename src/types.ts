@@ -42,3 +42,32 @@ export interface QuickOpenFileItem {
   relative_path: string;
 }
 
+export interface CustomApp {
+  id: string;
+  name: string;
+  appType: 'vscode' | 'custom';
+  path?: string;
+}
+
+export type ExternalAppType = 'vscode' | 'notepad' | 'default' | 'custom';
+
+export interface ContextMenuItem {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+  divider?: boolean;
+  onClick?: () => void;
+  children?: ContextMenuItem[];
+}
+
+export interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  items: ContextMenuItem[];
+  title?: string;
+}
+
