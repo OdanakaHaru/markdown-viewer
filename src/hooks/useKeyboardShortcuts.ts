@@ -18,10 +18,20 @@ export interface ShortcutActions {
   reopenClosedTab: () => void;
   /** Ctrl+B: サイドバーの表示/非表示切替 */
   toggleSidebar: () => void;
+  /** Ctrl+P: クイックオープンを開く */
+  openQuickOpen?: () => void;
+  /** Escape: クイックオープンを閉じる */
+  closeQuickOpen?: () => void;
+  /** Ctrl+Shift+P: 印刷 / PDFエクスポート */
+  printDocument: () => void;
   /** Ctrl+,: 設定画面を開く */
   openSettings: () => void;
   /** F11: 全画面切り替え */
   toggleFullscreen: () => void;
+  /** Ctrl+F: ページ内検索を開く */
+  openSearch?: () => void;
+  /** Escape: ページ内検索を閉じる */
+  closeSearch?: () => void;
   /** Escape: 全画面解除（設定モーダルが開いていない場合のみ） */
   exitFullscreen: () => void;
 }
@@ -30,6 +40,10 @@ interface UseKeyboardShortcutsOptions {
   actions: ShortcutActions;
   /** 設定モーダルが開いているかどうか（Escapeの動作制御に使用） */
   isSettingsOpen: boolean;
+  /** 検索バーが開いているかどうか（Escapeの動作制御に使用） */
+  isSearchOpen?: boolean;
+  /** クイックオープンモーダルが開いているかどうか */
+  isQuickOpenOpen?: boolean;
 }
 
 /**
@@ -38,12 +52,19 @@ interface UseKeyboardShortcutsOptions {
  * すべてのグローバルキーイベントをこのフック内で処理し、
  * ブラウザのデフォルト動作（新規タブやダウンロード等）をpreventDefaultで抑制する。
  */
-export function useKeyboardShortcuts({ actions, isSettingsOpen }: UseKeyboardShortcutsOptions) {
+export function useKeyboardShortcuts({ actions, isSettingsOpen, isSearchOpen, isQuickOpenOpen }: UseKeyboardShortcutsOptions) {
   const handleKeyDown = useCallback(
     async (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
       const shift = e.shiftKey;
       const key = e.key.toLowerCase();
+
+      // --- Ctrl+F: ページ内検索を開く ---
+      if (ctrl && !shift && key === 'f') {
+        e.preventDefault();
+        actions.openSearch?.();
+        return;
+      }
 
       // --- Ctrl+W: アクティブタブを閉じる ---
       if (ctrl && !shift && key === 'w') {
@@ -94,6 +115,20 @@ export function useKeyboardShortcuts({ actions, isSettingsOpen }: UseKeyboardSho
         return;
       }
 
+      // --- Ctrl+Shift+P: 印刷 / PDFエクスポート ---
+      if (ctrl && shift && key === 'p') {
+        e.preventDefault();
+        actions.printDocument();
+        return;
+      }
+
+      // --- Ctrl+P: クイックオープンを開く ---
+      if (ctrl && !shift && key === 'p') {
+        e.preventDefault();
+        actions.openQuickOpen?.();
+        return;
+      }
+
       // --- Ctrl+,: 設定を開く ---
       if (ctrl && !shift && key === ',') {
         e.preventDefault();
@@ -108,13 +143,23 @@ export function useKeyboardShortcuts({ actions, isSettingsOpen }: UseKeyboardSho
         return;
       }
 
-      // --- Escape: 全画面解除（設定モーダルが開いている場合はモーダル側で処理） ---
-      if (e.key === 'Escape' && !isSettingsOpen) {
-        actions.exitFullscreen();
-        return;
+      // --- Escape: クイックオープン / 検索バーを閉じる / 全画面解除 ---
+      if (e.key === 'Escape') {
+        if (isQuickOpenOpen && actions.closeQuickOpen) {
+          actions.closeQuickOpen();
+          return;
+        }
+        if (isSearchOpen && actions.closeSearch) {
+          actions.closeSearch();
+          return;
+        }
+        if (!isSettingsOpen) {
+          actions.exitFullscreen();
+          return;
+        }
       }
     },
-    [actions, isSettingsOpen]
+    [actions, isSettingsOpen, isSearchOpen, isQuickOpenOpen]
   );
 
   useEffect(() => {

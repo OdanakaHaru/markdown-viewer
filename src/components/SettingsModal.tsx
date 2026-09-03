@@ -193,8 +193,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span className="shortcut-action">ファイルを開く</span>
                 <kbd className="shortcut-key">Ctrl+O</kbd>
               </div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">印刷 / PDF保存</span>
+                <kbd className="shortcut-key">Ctrl+P</kbd>
+              </div>
 
               <div className="shortcut-group-title">UI操作</div>
+              <div className="shortcut-item">
+                <span className="shortcut-action">ページ内テキスト検索</span>
+                <kbd className="shortcut-key">Ctrl+F</kbd>
+              </div>
               <div className="shortcut-item">
                 <span className="shortcut-action">サイドバーの表示/非表示</span>
                 <kbd className="shortcut-key">Ctrl+B</kbd>

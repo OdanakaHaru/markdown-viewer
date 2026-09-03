@@ -112,3 +112,36 @@ export const SplitPaneIcon: React.FC<{ className?: string }> = ({ className }) =
   </svg>
 );
 
+export const PrintIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M4 1a1 1 0 0 0-1 1v2H2a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2h1a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1V2a1 1 0 0 0-1-1H4zm1 1h6v2H5V2zm-3 4h12a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1v-1a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm3 5h6v3H5v-3z"/>
+  </svg>
+);
+
+export const TocIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75zm2 4A.75.75 0 0 1 4.75 7h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 4 7.75zm-2 4A.75.75 0 0 1 2.75 11h10.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75zm2 4A.75.75 0 0 1 4.75 15h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 4 15.75zM2.5 7.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 8a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"/>
+  </svg>
+);
+
+export const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+    <path fillRule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5z"/>
+    <path fillRule="evenodd" d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5z"/>
+  </svg>
+);
+
+export const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+    <path fillRule="evenodd" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/>
+  </svg>
+);
+
+export const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/>
+  </svg>
+);
+
+
+

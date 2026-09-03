@@ -1,16 +1,22 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import 'github-markdown-css/github-markdown.css';
 import './App.css';
-import type { FileEntry, ResolvedLink, TabItem } from './types';
+import type { SidebarView } from './types';
 import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
+import { QuickOpenModal } from './components/QuickOpenModal';
 import { MarkdownPane } from './components/MarkdownPane';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useFullscreen } from './hooks/useFullscreen';
 import { usePanes } from './hooks/usePanes';
+import { useWorkspace } from './hooks/useWorkspace';
+import { useActiveFileWatcher } from './hooks/useActiveFileWatcher';
+import { useToc } from './hooks/useToc';
+import { useLinkNavigation } from './hooks/useLinkNavigation';
+import { useFileOperations } from './hooks/useFileOperations';
+import { isSubpathOf } from './utils/path';
 import {
   SidebarToggleIcon,
   FolderOpenBtnIcon,
@@ -18,68 +24,20 @@ import {
   SettingsIcon,
   FullscreenIcon,
   FullscreenExitIcon,
+  PrintIcon,
+  TocIcon,
+  SearchIcon,
 } from './components/Icons';
 
-// Tauri環境かどうかの判定
-const isTauri = '__TAURI_INTERNALS__' in window;
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 const appWindow = isTauri ? getCurrentWebviewWindow() : null;
 
-/**
- * Markdownファイルの拡張子かどうかを判定する
- */
-function isMarkdownFile(filename: string): boolean {
-  const lower = filename.toLowerCase();
-  return (
-    lower.endsWith('.md') ||
-    lower.endsWith('.markdown') ||
-    lower.endsWith('.mdown') ||
-    lower.endsWith('.mkd') ||
-    lower.endsWith('.mdx')
-  );
-}
-
-/**
- * 見出し文字列からアンカーID（スラッグ）を生成する
- */
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\u00A0-\uFFFF -]/g, '')
-    .replace(/\s+/g, '-');
-}
-
-/**
- * ファイルパスから親ディレクトリのパスを取得する
- */
-function getParentDirPath(filePath: string): string | null {
-  const lastIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-  if (lastIndex <= 0) return null;
-  return filePath.substring(0, lastIndex);
-}
-
-/**
- * ファイルパスまたはディレクトリパスから末尾のディレクトリ名/ファイル名を取得する
- */
-function getPathBaseName(pathStr: string): string {
-  return pathStr.split(/[/\\]/).filter(Boolean).pop() || pathStr;
-}
-
-/**
- * filePath が targetDirPath の配下にあるかどうかを判定する
- */
-function isSubpathOf(filePath: string, targetDirPath: string): boolean {
-  const normFile = filePath.replace(/\\/g, '/').toLowerCase();
-  const normDir = targetDirPath.replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '');
-  return normFile === normDir || normFile.startsWith(normDir + '/');
-}
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
-
 function App() {
-  // --- カスタムフックによる関心事の分離 ---
+  const [error, setError] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarView, setSidebarView] = useState<SidebarView>('explorer');
+
+  // --- テーマ & フルスクリーン ---
   const {
     themeMode,
     effectiveTheme,
@@ -90,6 +48,7 @@ function App() {
 
   const { isFullscreen, toggleFullscreen, exitFullscreen } = useFullscreen();
 
+  // --- ペイン管理 ---
   const {
     panes,
     activePaneId,
@@ -108,20 +67,66 @@ function App() {
     goToPrevTab,
     goToNthTab,
     closeActiveTab,
+    reloadTabContent,
   } = usePanes();
 
-  // --- フォルダ・ツリー状態 ---
-  const [folderPath, setFolderPath] = useState<string | null>(null);
-  const [folderName, setFolderName] = useState<string | null>(null);
-  const [rootEntries, setRootEntries] = useState<FileEntry[]>([]);
-  const [isLoadingRoot, setIsLoadingRoot] = useState(false);
+  // --- 検索バー状態 ---
+  const [searchPaneId, setSearchPaneId] = useState<string | null>(null);
 
-  // --- アプリ共通状態 ---
-  const [error, setError] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const handleOpenSearch = useCallback(() => {
+    setSearchPaneId(activePaneId);
+  }, [activePaneId]);
 
-  // ウィンドウタイトルをファイル名で更新する
+  const handleCloseSearch = useCallback(() => {
+    setSearchPaneId(null);
+  }, []);
+
+  // --- クイックオープン（Ctrl+P）状態 ---
+  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
+
+  const handleOpenQuickOpen = useCallback(() => {
+    setIsQuickOpenOpen((prev) => !prev);
+  }, []);
+
+  const handleCloseQuickOpen = useCallback(() => {
+    setIsQuickOpenOpen(false);
+  }, []);
+
+  // --- ワークスペース / フォルダ管理 ---
+  const {
+    folderPath,
+    folderName,
+    setFolderPath,
+    setFolderName,
+    rootEntries,
+    isLoadingRoot,
+    loadDirectory,
+    handleOpenFolder,
+    handleRefreshFolder,
+  } = useWorkspace({
+    onError: setError,
+    onFolderOpened: () => setIsSidebarOpen(true),
+  });
+
+  // --- アクティブファイル監視（ホットリフレッシュ） ---
+  useActiveFileWatcher({
+    panes,
+    reloadTabContent,
+  });
+
+  // --- 目次（TOC）抽出 & スクロール連動 ---
+  const { tocItems, activeHeadingId, handleSelectHeading } = useToc({
+    activeContent: activeTab?.content,
+    activePaneId,
+  });
+
+  // --- 印刷 / PDFエクスポート ---
+  const handlePrintDocument = useCallback(() => {
+    if (!activeTab) return;
+    window.print();
+  }, [activeTab]);
+
+  // --- ウィンドウタイトルの更新 ---
   const updateTitle = useCallback((filename: string, dirName?: string | null) => {
     const title = dirName
       ? `${filename} - ${dirName} - Markdown Viewer`
@@ -132,8 +137,7 @@ function App() {
     });
   }, []);
 
-  // アクティブタブが現在開いているフォルダの配下として表示すべきかどうか
-  const showFolderInBreadcrumb = Boolean(
+  const isTabInOpenedFolder = Boolean(
     folderName &&
     folderPath &&
     activeTab &&
@@ -142,362 +146,67 @@ function App() {
     isSubpathOf(activeTab.filePath, folderPath)
   );
 
-  // アクティブタブ変更に応じたタイトル更新
   useEffect(() => {
     if (activeTab) {
-      updateTitle(activeTab.fileName, showFolderInBreadcrumb ? folderName : null);
+      updateTitle(activeTab.fileName, isTabInOpenedFolder ? folderName : null);
     } else {
       updateTitle('Markdown Viewer', folderName);
     }
-  }, [activeTab, folderName, showFolderInBreadcrumb, updateTitle]);
+  }, [activeTab, folderName, isTabInOpenedFolder, updateTitle]);
 
-  // アンカー位置へスムーズにスクロールする
-  const scrollToAnchor = useCallback((hash: string, _paneId?: string) => {
-    if (!hash) return;
-    try {
-      const rawHash = hash.replace(/^#/, '');
-      const decoded = decodeURIComponent(rawHash).trim();
-      const slug = slugify(decoded);
+  // --- ファイル操作 & ナビゲーション ---
+  // 循環参照を避けるため、まず scrollToAnchor と handleLinkClick 用のフックを生成
+  // （onSelectFile は useFileOperations から提供）
+  const handleSelectFileRef = useRef<
+    (path: string, initialHash?: string | null, targetPaneId?: string) => Promise<void>
+  >(async () => {});
 
-      const targetElement =
-        document.getElementById(decoded) ||
-        document.getElementById(slug) ||
-        document.getElementById(rawHash) ||
-        (decoded ? document.querySelector(`[id="${CSS.escape(decoded)}"]`) : null) ||
-        (slug ? document.querySelector(`[id="${CSS.escape(slug)}"]`) : null);
-
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } catch (err) {
-      console.error('アンカーへのスクロールに失敗:', err);
-    }
-  }, []);
-
-  // ブラウザ既定のドラッグ＆ドロップ動作を抑制
-  useEffect(() => {
-    const preventDefaults = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    window.addEventListener('dragover', preventDefaults);
-    window.addEventListener('drop', preventDefaults);
-
-    return () => {
-      window.removeEventListener('dragover', preventDefaults);
-      window.removeEventListener('drop', preventDefaults);
-    };
-  }, []);
-
-  // フォルダ内のエントリ一覧を読み込む
-  const loadDirectory = useCallback(async (path: string) => {
-    setIsLoadingRoot(true);
-    try {
-      const entries = await invoke<FileEntry[]>('read_directory', { path });
-      setRootEntries(entries);
-      setError('');
-    } catch (err: unknown) {
-      setError(typeof err === 'string' ? err : 'フォルダの読み込みに失敗しました。');
-      setRootEntries([]);
-    } finally {
-      setIsLoadingRoot(false);
-    }
-  }, []);
-
-  // 「フォルダを開く」ハンドラ
-  const handleOpenFolder = async () => {
-    if (!isTauri) {
-      setError('フォルダ選択機能はデスクトップアプリ環境でのみ動作します。');
-      return;
-    }
-    try {
-      const path = await invoke<string>('open_folder');
-      const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
-      setFolderPath(path);
-      setFolderName(name);
-      setIsSidebarOpen(true);
-      await loadDirectory(path);
-    } catch (err: unknown) {
-      if (err !== 'No folder selected') {
-        setError(typeof err === 'string' ? err : 'フォルダの選択に失敗しました。');
-      }
-    }
-  };
-
-  // ルートフォルダの最新化
-  const handleRefreshFolder = async () => {
-    if (folderPath) {
-      await loadDirectory(folderPath);
-    }
-  };
-
-  // ファイルを選択して表示
-  const handleSelectFile = useCallback(
+  const handleSelectFileProxy = useCallback(
     async (path: string, initialHash?: string | null, targetPaneId?: string) => {
-      try {
-        const [filePath, text] = await invoke<[string, string]>('read_md_file', { path });
-        const filename = filePath.split(/[/\\]/).pop() || 'Untitled';
-
-        const newTab: TabItem = {
-          id: generateId(),
-          filePath,
-          fileName: filename,
-          content: text,
-        };
-
-        const targetId = targetPaneId || activePaneId;
-        addTabToPane(targetId, newTab);
-        setActivePaneId(targetId);
-        setError('');
-
-        if (initialHash) {
-          setTimeout(() => {
-            scrollToAnchor(initialHash, targetId);
-          }, 100);
-        }
-      } catch (err: unknown) {
-        setError(typeof err === 'string' ? err : 'ファイルの読み込みに失敗しました。');
-      }
+      await handleSelectFileRef.current(path, initialHash, targetPaneId);
     },
-    [activePaneId, addTabToPane, scrollToAnchor, setActivePaneId]
+    []
   );
 
-  const handleDropFile = (filePath: string, targetPaneId: string) => {
-    handleSelectFile(filePath, null, targetPaneId);
-  };
+  const { scrollToAnchor, handleLinkClick } = useLinkNavigation({
+    panes,
+    folderPath,
+    onSelectFile: handleSelectFileProxy,
+    onError: setError,
+  });
 
-  // Markdownリンクのクリック処理
-  const handleLinkClick = useCallback(
-    async (href: string, sourcePaneId: string) => {
-      if (!href) return;
+  const {
+    isDragging,
+    handleSelectFile,
+    handleDropFile,
+    handleQuickOpenFile,
+    handleOpenFile,
+    handleDragEnter,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    allOpenTabs,
+  } = useFileOperations({
+    panes,
+    activePaneId,
+    setActivePaneId,
+    addTabToPane,
+    handleSelectTab,
+    folderPath,
+    setFolderPath,
+    setFolderName,
+    setIsSidebarOpen,
+    loadDirectory,
+    scrollToAnchor,
+    onError: setError,
+  });
 
-      // 1. 同一ドキュメント内のアンカーリンク (#見出し)
-      if (href.startsWith('#')) {
-        scrollToAnchor(href, sourcePaneId);
-        return;
-      }
-
-      // デスクトップ環境以外 (Webプレビュー等) のフォールバック
-      if (!isTauri) {
-        if (
-          href.startsWith('http://') ||
-          href.startsWith('https://') ||
-          href.startsWith('mailto:')
-        ) {
-          window.open(href, '_blank', 'noopener,noreferrer');
-        }
-        return;
-      }
-
-      try {
-        const sourcePane = panes.find((p) => p.id === sourcePaneId);
-        const sourceTab = sourcePane?.tabs.find((t) => t.id === sourcePane.activeTabId);
-        const baseFilePath = sourceTab?.filePath || null;
-
-        const resolved = await invoke<ResolvedLink>('resolve_link_target', {
-          baseFilePath,
-          baseFolderPath: sourceTab?.isStandalone ? null : folderPath,
-          href,
-        });
-
-        switch (resolved.kind) {
-          case 'url':
-          case 'file':
-            await invoke('open_external', { target: resolved.target });
-            break;
-
-          case 'anchor':
-            if (resolved.hash) {
-              scrollToAnchor(resolved.hash, sourcePaneId);
-            }
-            break;
-
-          case 'markdown':
-            // リンク先は元のペインで新しいタブとして開く
-            await handleSelectFile(resolved.target, resolved.hash, sourcePaneId);
-            break;
-
-          case 'markdown_not_found':
-          case 'not_found':
-            setError(`リンク先のファイルが見つかりません: ${resolved.target}`);
-            break;
-
-          default:
-            await invoke('open_external', { target: resolved.target });
-            break;
-        }
-      } catch (err: unknown) {
-        setError(typeof err === 'string' ? err : 'リンクを開くことができませんでした。');
-      }
-    },
-    [folderPath, handleSelectFile, scrollToAnchor, panes]
-  );
-
-  // 単一の「ファイルを開く」ハンドラ
-  const handleOpenFile = useCallback(async () => {
-    if (!isTauri) {
-      setError(
-        'この機能はデスクトップアプリ環境でのみ動作します。ファイルをドラッグ＆ドロップしてください。'
-      );
-      return;
-    }
-    try {
-      const [path, text] = await invoke<[string, string]>('open_md_file');
-      const filename = getPathBaseName(path) || 'Untitled';
-
-      const newTab: TabItem = {
-        id: generateId(),
-        filePath: path,
-        fileName: filename,
-        content: text,
-      };
-
-      addTabToPane(activePaneId, newTab);
-      setError('');
-
-      // 親ディレクトリの自動判定とサイドバー読み込み
-      const parentDir = getParentDirPath(path);
-      const parentDirName = parentDir ? getPathBaseName(parentDir) : null;
-      const isAlreadyInFolder = folderPath ? isSubpathOf(path, folderPath) : false;
-
-      if (!isAlreadyInFolder && parentDir && parentDirName) {
-        setFolderPath(parentDir);
-        setFolderName(parentDirName);
-        setIsSidebarOpen(true);
-        await loadDirectory(parentDir);
-      }
-    } catch (err: unknown) {
-      if (err !== 'No file selected') {
-        setError(typeof err === 'string' ? err : 'ファイルの選択に失敗しました。');
-      }
-    }
-  }, [activePaneId, addTabToPane, folderPath, loadDirectory]);
-
-  // ドラッグ中の判定
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    if (e.dataTransfer.types.includes('application/json')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDragging(false);
-  };
-
-  // アクティブペインIDの最新参照を保持（イベントリスナー用）
-  const activePaneIdRef = useRef(activePaneId);
+  // Proxy ref を実際のハンドラと接続
   useEffect(() => {
-    activePaneIdRef.current = activePaneId;
-  }, [activePaneId]);
+    handleSelectFileRef.current = handleSelectFile;
+  }, [handleSelectFile]);
 
-  const lastDropHandledTimeRef = useRef<number>(0);
-
-  // Tauriネイティブのファイルドロップリスナー (Windows / macOS)
-  useEffect(() => {
-    if (!appWindow) return;
-
-    let unlisten: (() => void) | undefined;
-    appWindow
-      .onDragDropEvent(async (event) => {
-        if (event.payload.type === 'over' || event.payload.type === 'enter') {
-          setIsDragging(true);
-        } else if (event.payload.type === 'leave') {
-          setIsDragging(false);
-        } else if (event.payload.type === 'drop') {
-          setIsDragging(false);
-          const paths = event.payload.paths;
-          if (!paths || paths.length === 0) return;
-
-          const path = paths[0];
-          if (!isMarkdownFile(path)) {
-            setError('Markdown (.md, .markdown) ファイルをドロップしてください。');
-            return;
-          }
-
-          lastDropHandledTimeRef.current = Date.now();
-
-          try {
-            const [filePath, text] = await invoke<[string, string]>('read_md_file', { path });
-            const filename = getPathBaseName(filePath) || 'Untitled';
-
-            const newTab: TabItem = {
-              id: generateId(),
-              filePath,
-              fileName: filename,
-              content: text,
-              isStandalone: true,
-            };
-
-            addTabToPane(activePaneIdRef.current, newTab);
-            setError('');
-          } catch (err: unknown) {
-            setError(typeof err === 'string' ? err : 'ファイルの読み込みに失敗しました。');
-          }
-        }
-      })
-      .then((fn) => {
-        unlisten = fn;
-      })
-      .catch((err) => {
-        console.error('onDragDropEvent の登録に失敗:', err);
-      });
-
-    return () => {
-      if (unlisten) unlisten();
-    };
-  }, [addTabToPane]);
-
-  // ファイル/フォルダがドロップされた時の処理 (HTML5フォールバック)
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    // ネイティブ側で既に処理された直後の場合は重複防止
-    if (Date.now() - lastDropHandledTimeRef.current < 1000) {
-      return;
-    }
-
-    const files = e.dataTransfer?.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    if (!isMarkdownFile(file.name)) {
-      setError('Markdown (.md, .markdown) ファイルをドロップしてください。');
-      return;
-    }
-
-    try {
-      const text = await file.text();
-      const html = await invoke<string>('parse_markdown', { md: text });
-
-      const droppedPath = (file as unknown as { path?: string }).path || '';
-      const newTab: TabItem = {
-        id: generateId(),
-        filePath: droppedPath,
-        fileName: file.name,
-        content: html,
-        isStandalone: true,
-      };
-
-      addTabToPane(activePaneId, newTab);
-      setError('');
-    } catch {
-      setError('ファイルの読み込みに失敗しました。');
-    }
-  };
-
-  // キーボードショートカットの一元管理
+  // --- キーボードショートカットの一元管理 ---
   const shortcutActions = useMemo(
     () => ({
       closeActiveTab,
@@ -507,9 +216,14 @@ function App() {
       openFile: handleOpenFile,
       reopenClosedTab: handleReopenClosedTab,
       toggleSidebar: () => setIsSidebarOpen((prev) => !prev),
+      openQuickOpen: handleOpenQuickOpen,
+      closeQuickOpen: handleCloseQuickOpen,
+      printDocument: handlePrintDocument,
       openSettings: () => setIsSettingsOpen(true),
       toggleFullscreen,
       exitFullscreen,
+      openSearch: handleOpenSearch,
+      closeSearch: handleCloseSearch,
     }),
     [
       closeActiveTab,
@@ -518,13 +232,23 @@ function App() {
       goToNthTab,
       handleOpenFile,
       handleReopenClosedTab,
+      handleOpenQuickOpen,
+      handleCloseQuickOpen,
+      handlePrintDocument,
       setIsSettingsOpen,
       toggleFullscreen,
       exitFullscreen,
+      handleOpenSearch,
+      handleCloseSearch,
     ]
   );
 
-  useKeyboardShortcuts({ actions: shortcutActions, isSettingsOpen });
+  useKeyboardShortcuts({
+    actions: shortcutActions,
+    isSettingsOpen,
+    isSearchOpen: Boolean(searchPaneId),
+    isQuickOpenOpen,
+  });
 
   return (
     <div
@@ -540,38 +264,84 @@ function App() {
         <div className="toolbar-left">
           <button
             type="button"
-            className={`toolbar-icon-btn ${isSidebarOpen ? 'active' : ''}`}
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            title={isSidebarOpen ? 'サイドバーを非表示' : 'サイドバーを表示'}
+            className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'explorer' ? 'active' : ''}`}
+            onClick={() => {
+              if (isSidebarOpen && sidebarView === 'explorer') {
+                setIsSidebarOpen(false);
+              } else {
+                setIsSidebarOpen(true);
+                setSidebarView('explorer');
+              }
+            }}
+            title={
+              isSidebarOpen && sidebarView === 'explorer'
+                ? 'サイドバーを非表示 (Ctrl+B)'
+                : 'エクスプローラーを表示 (Ctrl+B)'
+            }
           >
             <SidebarToggleIcon />
           </button>
           <button
             type="button"
-            className="toolbar-btn toolbar-btn-folder"
-            onClick={handleOpenFolder}
+            className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'toc' ? 'active' : ''}`}
+            onClick={() => {
+              if (isSidebarOpen && sidebarView === 'toc') {
+                setIsSidebarOpen(false);
+              } else {
+                setIsSidebarOpen(true);
+                setSidebarView('toc');
+              }
+            }}
+            title={isSidebarOpen && sidebarView === 'toc' ? '目次を非表示' : '目次 / アウトラインを表示'}
           >
-            <FolderOpenBtnIcon className="btn-icon" />
-            <span>フォルダを開く</span>
+            <TocIcon />
           </button>
           <button
             type="button"
-            className="toolbar-btn"
+            className="toolbar-btn toolbar-btn-folder"
+            onClick={handleOpenFolder}
+            title="フォルダを開く"
+          >
+            <FolderOpenBtnIcon className="btn-icon" />
+            <span className="toolbar-btn-text">フォルダを開く</span>
+          </button>
+          <button
+            type="button"
+            className="toolbar-btn toolbar-btn-file"
             onClick={handleOpenFile}
+            title="ファイルを開く"
           >
             <MarkdownFileIcon className="btn-icon" />
-            <span>ファイルを開く</span>
+            <span className="toolbar-btn-text">ファイルを開く</span>
           </button>
         </div>
 
-        {activeTab && (
-          <div className="toolbar-breadcrumb" title={activeTab.filePath}>
-            {showFolderInBreadcrumb && <span className="breadcrumb-folder">{folderName} / </span>}
-            <span className="breadcrumb-file">{activeTab.fileName}</span>
-          </div>
-        )}
+        {/* クイックオープン起動ボタン (VS Code風検索バー) */}
+        <div className="toolbar-center">
+          <button
+            type="button"
+            className="toolbar-quick-open-btn"
+            onClick={handleOpenQuickOpen}
+            title="ファイルをクイックオープン (Ctrl+P)"
+          >
+            <SearchIcon className="quick-open-btn-icon" />
+            <span className="quick-open-btn-label">
+              {folderName ? `${folderName} を検索...` : 'ファイルをクイックオープン...'}
+            </span>
+            <kbd className="quick-open-btn-kbd">Ctrl+P</kbd>
+          </button>
+        </div>
 
         <div className="toolbar-right">
+          <button
+            type="button"
+            className="toolbar-icon-btn"
+            onClick={handlePrintDocument}
+            title={activeTab ? '印刷 / PDF保存 (Ctrl+Shift+P)' : 'タブが開かれていません'}
+            disabled={!activeTab}
+          >
+            <PrintIcon />
+          </button>
           <button
             type="button"
             className={`toolbar-icon-btn ${isFullscreen ? 'active' : ''}`}
@@ -613,6 +383,12 @@ function App() {
             onRefresh={handleRefreshFolder}
             onSelectFile={(path) => handleSelectFile(path)}
             onToggleSidebar={() => setIsSidebarOpen(false)}
+            currentView={sidebarView}
+            onChangeView={setSidebarView}
+            tocItems={tocItems}
+            activeHeadingId={activeHeadingId}
+            onSelectHeading={handleSelectHeading}
+            hasActiveTab={Boolean(activeTab)}
           />
         )}
 
@@ -634,6 +410,8 @@ function App() {
               onLinkClick={handleLinkClick}
               onDropTab={handleMoveTab}
               onDropFile={handleDropFile}
+              isSearchOpen={searchPaneId === pane.id}
+              onCloseSearch={handleCloseSearch}
             />
           ))}
         </main>
@@ -648,6 +426,18 @@ function App() {
         autoCloseEmptyPane={autoCloseEmptyPane}
         onAutoCloseEmptyPaneChange={handleAutoCloseEmptyPaneChange}
       />
+
+      {/* クイックオープンモーダル (Ctrl+P) */}
+      {isQuickOpenOpen && (
+        <QuickOpenModal
+          isOpen={isQuickOpenOpen}
+          onClose={handleCloseQuickOpen}
+          onSelectFile={handleQuickOpenFile}
+          folderPath={folderPath}
+          folderName={folderName}
+          openTabs={allOpenTabs}
+        />
+      )}
 
       {/* ドラッグオーバーレイ */}
       {isDragging && (

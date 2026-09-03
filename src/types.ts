@@ -28,3 +28,17 @@ export interface PaneItem {
   activeTabId: string | null;
 }
 
+export interface TocItem {
+  id: string;          // 見出しの要素ID（アンカー）
+  text: string;        // 見出しのテキスト内容
+  level: number;       // 1 〜 6
+}
+
+export type SidebarView = 'explorer' | 'toc';
+
+export interface QuickOpenFileItem {
+  name: string;
+  path: string;
+  relative_path: string;
+}
+

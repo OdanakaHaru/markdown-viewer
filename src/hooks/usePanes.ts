@@ -1,9 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { PaneItem, TabItem } from '../types';
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
+import { generateId } from '../utils/id';
+import { normalizePath } from '../utils/path';
 
 /** 閉じたタブの履歴保持上限 */
 const MAX_CLOSED_TABS_HISTORY = 10;
@@ -63,17 +61,17 @@ export function usePanes() {
     (paneId: string) => {
       setPanes((prev) => {
         if (prev.length <= 1) return prev; // 最後の1ペインは閉じない
-        return prev.filter((p) => p.id !== paneId);
-      });
-      setActivePaneId((prev) => {
-        if (prev === paneId) {
-          const remaining = panes.filter((p) => p.id !== paneId);
-          return remaining.length > 0 ? remaining[remaining.length - 1].id : prev;
-        }
-        return prev;
+        const remaining = prev.filter((p) => p.id !== paneId);
+        setActivePaneId((currentActive) => {
+          if (currentActive === paneId) {
+            return remaining.length > 0 ? remaining[remaining.length - 1].id : currentActive;
+          }
+          return currentActive;
+        });
+        return remaining;
       });
     },
-    [panes]
+    []
   );
 
   // タブを閉じる
@@ -267,6 +265,23 @@ export function usePanes() {
     setActivePaneId(targetPaneId);
   }, [closedTabsHistory, panes, activePaneId, addTabToPane]);
 
+  // ファイルパスに一致するタブの内容を更新（ホットリフレッシュ用）
+  const reloadTabContent = useCallback((targetFilePath: string, newContent: string) => {
+    const normTarget = normalizePath(targetFilePath);
+    setPanes((prev) =>
+      prev.map((pane) => ({
+        ...pane,
+        tabs: pane.tabs.map((tab) => {
+          const normTabPath = normalizePath(tab.filePath);
+          if (normTabPath === normTarget) {
+            return { ...tab, content: newContent };
+          }
+          return tab;
+        }),
+      }))
+    );
+  }, []);
+
   // 現在のアクティブペインおよびアクティブタブの参照
   const activePane = panes.find((p) => p.id === activePaneId);
   const activeTab = activePane?.tabs.find((t) => t.id === activePane.activeTabId);
@@ -290,5 +305,6 @@ export function usePanes() {
     goToPrevTab,
     goToNthTab,
     closeActiveTab,
+    reloadTabContent,
   };
 }
