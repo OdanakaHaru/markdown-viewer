@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import DOMPurify from 'dompurify';
 import type { PaneItem } from '../types';
 import { TabBar } from './TabBar';
 
@@ -42,8 +43,17 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   const selectedFilePath = activeTab?.filePath || null;
   const selectedFileName = activeTab?.fileName || null;
 
+  // DOMPurify によるサニタイズ（XSS対策）
+  const sanitizedContent = useMemo(() => {
+    if (!content) return '';
+    return DOMPurify.sanitize(content, {
+      ADD_TAGS: ['input'], // タスクリスト用
+      ADD_ATTR: ['checked', 'disabled', 'type', 'target', 'rel', 'id'], // 見出しアンカーID・タスク用
+    });
+  }, [content]);
+
   useEffect(() => {
-    if (!content || !containerRef.current) return;
+    if (!sanitizedContent || !containerRef.current) return;
     const container = containerRef.current;
 
     // 画像パスの置換
@@ -64,7 +74,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
           });
       }
     });
-  }, [content, selectedFilePath, folderPath]);
+  }, [sanitizedContent, selectedFilePath, folderPath]);
 
   const handleHtmlClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -144,7 +154,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
               ref={containerRef}
               className="markdown-body"
               onClick={handleHtmlClick}
-              dangerouslySetInnerHTML={{ __html: content }}
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
           </div>
         ) : (

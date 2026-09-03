@@ -29,25 +29,9 @@ fn is_markdown_extension(path: &Path) -> bool {
 
 /// UTF-8のパーセントエンコード（日本語等のマルチバイト文字含む）を正しくデコードする
 fn urlencoding_decode(s: &str) -> String {
-    let mut bytes = Vec::new();
-    let mut chars = s.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '%' {
-            let hex: String = chars.by_ref().take(2).collect();
-            if hex.len() == 2 {
-                if let Ok(byte) = u8::from_str_radix(&hex, 16) {
-                    bytes.push(byte);
-                    continue;
-                }
-            }
-            bytes.push(b'%');
-            bytes.extend_from_slice(hex.as_bytes());
-        } else {
-            let mut buf = [0; 4];
-            bytes.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
-        }
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
+    urlencoding::decode(s)
+        .map(|cow| cow.into_owned())
+        .unwrap_or_else(|_| s.to_string())
 }
 
 /// パス内の `.` や `..`、混在したスラッシュを正規化する
@@ -330,33 +314,7 @@ fn resolve_link_target(
 
 #[tauri::command]
 fn open_external(target: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        std::process::Command::new("cmd")
-            .args(["/c", "start", "", &target])
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn()
-            .map_err(|e| format!("外部アプリケーションの起動に失敗しました: {}", e))?;
-        Ok(())
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&target)
-            .spawn()
-            .map_err(|e| format!("外部アプリケーションの起動に失敗しました: {}", e))?;
-        Ok(())
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&target)
-            .spawn()
-            .map_err(|e| format!("外部アプリケーションの起動に失敗しました: {}", e))?;
-        Ok(())
-    }
+    open::that_detached(&target).map_err(|e| format!("外部アプリケーションの起動に失敗しました: {}", e))
 }
 
 fn get_image_mime_type(path: &Path) -> &'static str {
@@ -379,29 +337,8 @@ fn get_image_mime_type(path: &Path) -> &'static str {
 }
 
 pub fn base64_encode(data: &[u8]) -> String {
-    const CHARSET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0];
-        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
-
-        result.push(CHARSET[(b0 >> 2) as usize] as char);
-        result.push(CHARSET[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
-
-        if chunk.len() > 1 {
-            result.push(CHARSET[(((b1 & 0x0f) << 2) | (b2 >> 6)) as usize] as char);
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            result.push(CHARSET[(b2 & 0x3f) as usize] as char);
-        } else {
-            result.push('=');
-        }
-    }
-    result
+    use base64::prelude::*;
+    BASE64_STANDARD.encode(data)
 }
 
 #[tauri::command]
