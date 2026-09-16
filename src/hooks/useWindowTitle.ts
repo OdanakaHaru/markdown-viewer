@@ -15,8 +15,8 @@ interface UseWindowTitleProps {
 export function useWindowTitle({ activeTab, folderName, folderPath }: UseWindowTitleProps) {
   const updateTitle = useCallback((filename: string, dirName?: string | null) => {
     const title = dirName
-      ? `${filename} - ${dirName} - Markdown Viewer`
-      : `${filename} - Markdown Viewer`;
+      ? `${filename} - ${dirName} - FeatherMark`
+      : `${filename} - FeatherMark`;
     document.title = title;
     appWindow?.setTitle(title).catch((err) => {
       console.error('ウィンドウタイトルの更新に失敗:', err);
@@ -36,7 +36,7 @@ export function useWindowTitle({ activeTab, folderName, folderPath }: UseWindowT
     if (activeTab) {
       updateTitle(activeTab.fileName, isTabInOpenedFolder ? folderName : null);
     } else {
-      updateTitle('Markdown Viewer', folderName);
+      updateTitle('FeatherMark', folderName);
     }
   }, [activeTab, folderName, isTabInOpenedFolder, updateTitle]);
 }

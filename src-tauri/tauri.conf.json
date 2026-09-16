@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "markdown-viewer",
+  "productName": "FeatherMark",
   "version": "0.1.0",
-  "identifier": "com.odanaka.markdownviewer",
+  "identifier": "com.odanaka.feathermark",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Markdown Viewer",
+        "title": "FeatherMark",
         "width": 800,
         "height": 600,
         "resizable": true,
