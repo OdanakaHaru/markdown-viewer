@@ -392,3 +392,373 @@ ins.diff-ins,
   padding: 1px 4px !important;
 }
 
+/* ==========================================================================
+   テーブル（表）の全体差分スタイル
+   ========================================================================== */
+
+/* 差分を含むテーブル外枠 */
+.diff-viewer-container table:has(.diff-ins),
+.diff-viewer-container table:has(.diff-del) {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 追加を含むテーブル（新・統合） */
+.diff-visual-right table:has(.diff-ins),
+.diff-viewer-container .diff-unified-content table:has(.diff-ins):not(:has(.diff-del)) {
+  border-left: 3px solid #2da44e !important;
+}
+
+/* 削除を含むテーブル（旧・統合） */
+.diff-visual-left table:has(.diff-del),
+.diff-viewer-container .diff-unified-content table:has(.diff-del):not(:has(.diff-ins)) {
+  border-left: 3px solid #cf222e !important;
+}
+
+/* 変更（追加・削除双方）を含むテーブル（統合） */
+.diff-viewer-container .diff-unified-content table:has(.diff-ins):has(.diff-del) {
+  border-left: 3px solid #d29922 !important;
+}
+
+/* テーブル行（tr）のインジケータ */
+.diff-visual-right tr:has(.diff-ins) > td:first-child,
+.diff-visual-right tr:has(.diff-ins) > th:first-child,
+.diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > td:first-child,
+.diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > th:first-child {
+  border-left: 3px solid #2da44e !important;
+}
+
+.diff-visual-left tr:has(.diff-del) > td:first-child,
+.diff-visual-left tr:has(.diff-del) > th:first-child,
+.diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > td:first-child,
+.diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > th:first-child {
+  border-left: 3px solid #cf222e !important;
+}
+
+.diff-unified-content tr:has(.diff-ins):has(.diff-del) > td:first-child,
+.diff-unified-content tr:has(.diff-ins):has(.diff-del) > th:first-child {
+  border-left: 3px solid #d29922 !important;
+}
+
+/* テーブルセル（td, th）全体への着色 */
+.diff-visual-right td:has(.diff-ins),
+.diff-visual-right th:has(.diff-ins),
+.diff-unified-content td:has(.diff-ins):not(:has(.diff-del)),
+.diff-unified-content th:has(.diff-ins):not(:has(.diff-del)) {
+  background-color: rgba(46, 160, 67, 0.14) !important;
+  border-color: rgba(46, 160, 67, 0.35) !important;
+}
+
+.diff-visual-left td:has(.diff-del),
+.diff-visual-left th:has(.diff-del),
+.diff-unified-content td:has(.diff-del):not(:has(.diff-ins)),
+.diff-unified-content th:has(.diff-del):not(:has(.diff-ins)) {
+  background-color: rgba(248, 81, 73, 0.14) !important;
+  border-color: rgba(248, 81, 73, 0.35) !important;
+}
+
+.diff-unified-content td:has(.diff-ins):has(.diff-del),
+.diff-unified-content th:has(.diff-ins):has(.diff-del) {
+  background-color: rgba(234, 179, 8, 0.12) !important;
+  border-color: rgba(234, 179, 8, 0.35) !important;
+}
+
+/* ダークモードでのテーブル差分スタイル */
+[data-theme="dark"] .diff-visual-right table:has(.diff-ins),
+.markdown-container[data-theme="dark"] .diff-visual-right table:has(.diff-ins),
+[data-theme="dark"] .diff-unified-content table:has(.diff-ins):not(:has(.diff-del)),
+.markdown-container[data-theme="dark"] .diff-unified-content table:has(.diff-ins):not(:has(.diff-del)) {
+  border-left: 3px solid #3fb950 !important;
+}
+
+[data-theme="dark"] .diff-visual-left table:has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-visual-left table:has(.diff-del),
+[data-theme="dark"] .diff-unified-content table:has(.diff-del):not(:has(.diff-ins)),
+.markdown-container[data-theme="dark"] .diff-unified-content table:has(.diff-del):not(:has(.diff-ins)) {
+  border-left: 3px solid #ff7b72 !important;
+}
+
+[data-theme="dark"] .diff-unified-content table:has(.diff-ins):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-unified-content table:has(.diff-ins):has(.diff-del) {
+  border-left: 3px solid #e3b341 !important;
+}
+
+[data-theme="dark"] .diff-visual-right tr:has(.diff-ins) > td:first-child,
+[data-theme="dark"] .diff-visual-right tr:has(.diff-ins) > th:first-child,
+.markdown-container[data-theme="dark"] .diff-visual-right tr:has(.diff-ins) > td:first-child,
+.markdown-container[data-theme="dark"] .diff-visual-right tr:has(.diff-ins) > th:first-child,
+[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > td:first-child,
+[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > th:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > td:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):not(:has(.diff-del)) > th:first-child {
+  border-left: 3px solid #3fb950 !important;
+}
+
+[data-theme="dark"] .diff-visual-left tr:has(.diff-del) > td:first-child,
+[data-theme="dark"] .diff-visual-left tr:has(.diff-del) > th:first-child,
+.markdown-container[data-theme="dark"] .diff-visual-left tr:has(.diff-del) > td:first-child,
+.markdown-container[data-theme="dark"] .diff-visual-left tr:has(.diff-del) > th:first-child,
+[data-theme="dark"] .diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > td:first-child,
+[data-theme="dark"] .diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > th:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > td:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-del):not(:has(.diff-ins)) > th:first-child {
+  border-left: 3px solid #ff7b72 !important;
+}
+
+[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):has(.diff-del) > td:first-child,
+[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):has(.diff-del) > th:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):has(.diff-del) > td:first-child,
+.markdown-container[data-theme="dark"] .diff-unified-content tr:has(.diff-ins):has(.diff-del) > th:first-child {
+  border-left: 3px solid #e3b341 !important;
+}
+
+[data-theme="dark"] .diff-visual-right td:has(.diff-ins),
+[data-theme="dark"] .diff-visual-right th:has(.diff-ins),
+.markdown-container[data-theme="dark"] .diff-visual-right td:has(.diff-ins),
+.markdown-container[data-theme="dark"] .diff-visual-right th:has(.diff-ins),
+[data-theme="dark"] .diff-unified-content td:has(.diff-ins):not(:has(.diff-del)),
+[data-theme="dark"] .diff-unified-content th:has(.diff-ins):not(:has(.diff-del)),
+.markdown-container[data-theme="dark"] .diff-unified-content td:has(.diff-ins):not(:has(.diff-del)),
+.markdown-container[data-theme="dark"] .diff-unified-content th:has(.diff-ins):not(:has(.diff-del)) {
+  background-color: rgba(46, 160, 67, 0.25) !important;
+  border-color: rgba(46, 160, 67, 0.5) !important;
+}
+
+[data-theme="dark"] .diff-visual-left td:has(.diff-del),
+[data-theme="dark"] .diff-visual-left th:has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-visual-left td:has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-visual-left th:has(.diff-del),
+[data-theme="dark"] .diff-unified-content td:has(.diff-del):not(:has(.diff-ins)),
+[data-theme="dark"] .diff-unified-content th:has(.diff-del):not(:has(.diff-ins)),
+.markdown-container[data-theme="dark"] .diff-unified-content td:has(.diff-del):not(:has(.diff-ins)),
+.markdown-container[data-theme="dark"] .diff-unified-content th:has(.diff-del):not(:has(.diff-ins)) {
+  background-color: rgba(248, 81, 73, 0.25) !important;
+  border-color: rgba(248, 81, 73, 0.5) !important;
+}
+
+[data-theme="dark"] .diff-unified-content td:has(.diff-ins):has(.diff-del),
+[data-theme="dark"] .diff-unified-content th:has(.diff-ins):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-unified-content td:has(.diff-ins):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-unified-content th:has(.diff-ins):has(.diff-del) {
+  background-color: rgba(234, 179, 8, 0.22) !important;
+  border-color: rgba(234, 179, 8, 0.5) !important;
+}
+
+/* ==========================================================================
+   コードブロック・枠囲みの全体差分スタイル
+   ========================================================================== */
+
+/* 追加を含むコードブロック（新ペイン / 統合） */
+.diff-visual-right .code-block-container:has(.diff-ins),
+.diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) {
+  border-color: rgba(46, 160, 67, 0.5) !important;
+  border-left: 4px solid #2da44e !important;
+  background-color: rgba(46, 160, 67, 0.07) !important;
+  box-shadow: 0 2px 10px rgba(46, 160, 67, 0.1) !important;
+}
+
+.diff-visual-right .code-block-container:has(.diff-ins) .code-block-header,
+.diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-header {
+  background-color: rgba(46, 160, 67, 0.14) !important;
+  border-bottom: 1px solid rgba(46, 160, 67, 0.35) !important;
+}
+
+.diff-visual-right .code-block-container:has(.diff-ins) .code-block-lang,
+.diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-lang {
+  background-color: rgba(46, 160, 67, 0.25) !important;
+  color: #1a7f37 !important;
+}
+
+/* 削除を含むコードブロック（旧ペイン / 統合） */
+.diff-visual-left .code-block-container:has(.diff-del),
+.diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) {
+  border-color: rgba(248, 81, 73, 0.5) !important;
+  border-left: 4px solid #cf222e !important;
+  background-color: rgba(248, 81, 73, 0.07) !important;
+  box-shadow: 0 2px 10px rgba(248, 81, 73, 0.1) !important;
+}
+
+.diff-visual-left .code-block-container:has(.diff-del) .code-block-header,
+.diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-header {
+  background-color: rgba(248, 81, 73, 0.14) !important;
+  border-bottom: 1px solid rgba(248, 81, 73, 0.35) !important;
+}
+
+.diff-visual-left .code-block-container:has(.diff-del) .code-block-lang,
+.diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-lang {
+  background-color: rgba(248, 81, 73, 0.25) !important;
+  color: #cf222e !important;
+}
+
+/* 変更（追加・削除双方）を含むコードブロック（統合） */
+.diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) {
+  border-color: rgba(210, 153, 34, 0.5) !important;
+  border-left: 4px solid #d29922 !important;
+  background-color: rgba(210, 153, 34, 0.05) !important;
+  box-shadow: 0 2px 10px rgba(210, 153, 34, 0.1) !important;
+}
+
+.diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-header {
+  background-color: rgba(210, 153, 34, 0.14) !important;
+  border-bottom: 1px solid rgba(210, 153, 34, 0.35) !important;
+}
+
+.diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-lang {
+  background-color: rgba(210, 153, 34, 0.25) !important;
+  color: #9a6700 !important;
+}
+
+/* 通常の pre 要素（コンテナなし） */
+.diff-visual-right pre:not(.code-block-container pre):has(.diff-ins),
+.diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):not(:has(.diff-del)) {
+  background-color: rgba(46, 160, 67, 0.07) !important;
+  border-color: rgba(46, 160, 67, 0.5) !important;
+  border-left: 4px solid #2da44e !important;
+}
+
+.diff-visual-left pre:not(.code-block-container pre):has(.diff-del),
+.diff-unified-content pre:not(.code-block-container pre):has(.diff-del):not(:has(.diff-ins)) {
+  background-color: rgba(248, 81, 73, 0.07) !important;
+  border-color: rgba(248, 81, 73, 0.5) !important;
+  border-left: 4px solid #cf222e !important;
+}
+
+.diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):has(.diff-del) {
+  background-color: rgba(210, 153, 34, 0.05) !important;
+  border-color: rgba(210, 153, 34, 0.5) !important;
+  border-left: 4px solid #d29922 !important;
+}
+
+/* ダークモードでのコードブロック差分スタイル */
+[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins),
+.markdown-container[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins),
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)),
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) {
+  border-color: rgba(63, 185, 80, 0.55) !important;
+  border-left: 4px solid #3fb950 !important;
+  background-color: rgba(46, 160, 67, 0.14) !important;
+  box-shadow: 0 2px 12px rgba(46, 160, 67, 0.2) !important;
+}
+
+[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins) .code-block-header,
+.markdown-container[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins) .code-block-header,
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-header,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-header {
+  background-color: rgba(46, 160, 67, 0.22) !important;
+  border-bottom-color: rgba(46, 160, 67, 0.4) !important;
+}
+
+[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins) .code-block-lang,
+.markdown-container[data-theme="dark"] .diff-visual-right .code-block-container:has(.diff-ins) .code-block-lang,
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-lang,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):not(:has(.diff-del)) .code-block-lang {
+  background-color: rgba(46, 160, 67, 0.32) !important;
+  color: #7ee787 !important;
+}
+
+[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del),
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)),
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) {
+  border-color: rgba(248, 81, 73, 0.55) !important;
+  border-left: 4px solid #ff7b72 !important;
+  background-color: rgba(248, 81, 73, 0.14) !important;
+  box-shadow: 0 2px 12px rgba(248, 81, 73, 0.2) !important;
+}
+
+[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del) .code-block-header,
+.markdown-container[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del) .code-block-header,
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-header,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-header {
+  background-color: rgba(248, 81, 73, 0.22) !important;
+  border-bottom-color: rgba(248, 81, 73, 0.4) !important;
+}
+
+[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del) .code-block-lang,
+.markdown-container[data-theme="dark"] .diff-visual-left .code-block-container:has(.diff-del) .code-block-lang,
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-lang,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-del):not(:has(.diff-ins)) .code-block-lang {
+  background-color: rgba(248, 81, 73, 0.32) !important;
+  color: #ff7b72 !important;
+}
+
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) {
+  border-color: rgba(227, 179, 65, 0.55) !important;
+  border-left: 4px solid #e3b341 !important;
+  background-color: rgba(227, 179, 65, 0.12) !important;
+  box-shadow: 0 2px 12px rgba(227, 179, 65, 0.18) !important;
+}
+
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-header,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-header {
+  background-color: rgba(227, 179, 65, 0.2) !important;
+  border-bottom-color: rgba(227, 179, 65, 0.4) !important;
+}
+
+[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-lang,
+.markdown-container[data-theme="dark"] .diff-unified-content .code-block-container:has(.diff-ins):has(.diff-del) .code-block-lang {
+  background-color: rgba(227, 179, 65, 0.3) !important;
+  color: #e3b341 !important;
+}
+
+[data-theme="dark"] .diff-visual-right pre:not(.code-block-container pre):has(.diff-ins),
+.markdown-container[data-theme="dark"] .diff-visual-right pre:not(.code-block-container pre):has(.diff-ins),
+[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):not(:has(.diff-del)),
+.markdown-container[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):not(:has(.diff-del)) {
+  background-color: rgba(46, 160, 67, 0.14) !important;
+  border-color: rgba(63, 185, 80, 0.55) !important;
+  border-left: 4px solid #3fb950 !important;
+}
+
+[data-theme="dark"] .diff-visual-left pre:not(.code-block-container pre):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-visual-left pre:not(.code-block-container pre):has(.diff-del),
+[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-del):not(:has(.diff-ins)),
+.markdown-container[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-del):not(:has(.diff-ins)) {
+  background-color: rgba(248, 81, 73, 0.14) !important;
+  border-color: rgba(248, 81, 73, 0.55) !important;
+  border-left: 4px solid #ff7b72 !important;
+}
+
+[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):has(.diff-del),
+.markdown-container[data-theme="dark"] .diff-unified-content pre:not(.code-block-container pre):has(.diff-ins):has(.diff-del) {
+  background-color: rgba(227, 179, 65, 0.12) !important;
+  border-color: rgba(227, 179, 65, 0.55) !important;
+  border-left: 4px solid #e3b341 !important;
+}
+
+/* コードブロック内の差分文字スタイリング */
+.diff-viewer-container .code-block-container del,
+.diff-viewer-container pre del {
+  background-color: rgba(248, 81, 73, 0.28) !important;
+  color: #cf222e !important;
+  font-weight: 500;
+  border-radius: 3px !important;
+  padding: 1px 4px !important;
+}
+
+.diff-viewer-container .code-block-container ins,
+.diff-viewer-container pre ins {
+  background-color: rgba(46, 160, 67, 0.28) !important;
+  color: #1a7f37 !important;
+  font-weight: 500;
+  border-radius: 3px !important;
+  padding: 1px 4px !important;
+}
+
+[data-theme="dark"] .diff-viewer-container .code-block-container del,
+.markdown-container[data-theme="dark"] .code-block-container del,
+[data-theme="dark"] .diff-viewer-container pre del,
+.markdown-container[data-theme="dark"] pre del {
+  background-color: rgba(248, 81, 73, 0.4) !important;
+  color: #ff7b72 !important;
+}
+
+[data-theme="dark"] .diff-viewer-container .code-block-container ins,
+.markdown-container[data-theme="dark"] .code-block-container ins,
+[data-theme="dark"] .diff-viewer-container pre ins,
+.markdown-container[data-theme="dark"] pre ins {
+  background-color: rgba(46, 160, 67, 0.4) !important;
+  color: #7ee787 !important;
+}
+
+

@@ -148,6 +148,16 @@ fn generate_html_diffs(old_html: &str, new_html: &str) -> (String, String, Strin
         }
     };
 
+    let is_structural_tag = |tag: &str| -> bool {
+        let lower = tag.to_lowercase();
+        let name = lower.trim_start_matches("</").trim_start_matches('<');
+        let token = name.split(|c: char| c.is_whitespace() || c == '>').next().unwrap_or("");
+        matches!(
+            token,
+            "table" | "thead" | "tbody" | "tfoot" | "tr" | "th" | "td" | "pre" | "code" | "div"
+        )
+    };
+
     for op in diff.ops() {
         for change in diff.iter_changes(op) {
             let val = change.value();
@@ -158,6 +168,9 @@ fn generate_html_diffs(old_html: &str, new_html: &str) -> (String, String, Strin
                     if is_tag {
                         flush_unified(&mut unified_html, &mut unified_del_buf, &mut unified_ins_buf);
                         flush_left(&mut left_html, &mut left_del_buf);
+                        if is_structural_tag(val) {
+                            unified_html.push_str(val);
+                        }
                         left_html.push_str(val);
                     } else {
                         unified_del_buf.push_str(val);
@@ -209,6 +222,17 @@ mod tests {
         println!("right: {}", r);
         assert!(l.contains("<del class=\"diff-del\">World</del>"));
         assert!(r.contains("<ins class=\"diff-ins\">Rust</ins>"));
+    }
+
+    #[test]
+    fn test_table_row_delete() {
+        let old_h = "<table><tbody><tr><td>Row 1</td></tr><tr><td>Row 2</td></tr></tbody></table>";
+        let new_h = "<table><tbody><tr><td>Row 1</td></tr></tbody></table>";
+        let (u, l, _r) = generate_html_diffs(old_h, new_h);
+        println!("Deleted row in unified: {}", u);
+        println!("Deleted row in left: {}", l);
+        assert!(u.contains("<tr><td><del class=\"diff-del\">Row 2</del></td></tr>"));
+        assert!(l.contains("<tr><td><del class=\"diff-del\">Row 2</del></td></tr>"));
     }
 }
 
