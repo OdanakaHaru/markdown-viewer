@@ -1,0 +1,100 @@
+﻿:root {
+  --bg-primary: #ffffff;
+  --bg-sidebar: #f6f8fa;
+  --bg-sidebar-hover: #eaeef2;
+  --bg-sidebar-selected: #e1e4e8;
+  --bg-toolbar: #f6f8fa;
+  --border-color: #d0d7de;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #8c959f;
+  --accent-color: #0969da;
+  --accent-hover: #0854b0;
+  --btn-green: #2da44e;
+  --btn-green-hover: #2c974b;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --modal-bg: #ffffff;
+  --modal-header-bg: #fafbfc;
+  --card-bg: #ffffff;
+  --card-selected-bg: #f0f7ff;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* シンタックスハイライト（ライト） */
+  --syntax-bg: #f6f8fa;
+  --syntax-header-bg: #eaeef2;
+  --syntax-border: #d0d7de;
+  --syntax-text: #24292f;
+  --syntax-comment: #6e7781;
+  --syntax-keyword: #cf222e;
+  --syntax-string: #0a3069;
+  --syntax-function: #8250df;
+  --syntax-variable: #953800;
+  --syntax-number: #0550ae;
+  --syntax-type: #116329;
+  --syntax-operator: #cf222e;
+  --syntax-constant: #0550ae;
+  --syntax-punctuation: #57606a;
+  --syntax-badge-bg: #e1e4e8;
+  --syntax-badge-text: #57606a;
+
+  /* クイックオープン（ライト） */
+  --quick-open-bg: #ffffff;
+  --quick-open-header-bg: #ffffff;
+  --quick-open-border: #d0d7de;
+  --quick-open-selected-bg: #0969da;
+  --quick-open-selected-text: #ffffff;
+  --quick-open-hover-bg: #f3f4f6;
+  --quick-open-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0d1117;
+  --bg-sidebar: #161b22;
+  --bg-sidebar-hover: #21262d;
+  --bg-sidebar-selected: #30363d;
+  --bg-toolbar: #161b22;
+  --border-color: #30363d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent-color: #58a6ff;
+  --accent-hover: #79c0ff;
+  --btn-green: #238636;
+  --btn-green-hover: #2ea043;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
+  --modal-bg: #161b22;
+  --modal-header-bg: #0d1117;
+  --card-bg: #161b22;
+  --card-selected-bg: rgba(56, 139, 253, 0.15);
+
+  /* シンタックスハイライト（ダーク） */
+  --syntax-bg: #161b22;
+  --syntax-header-bg: #0d1117;
+  --syntax-border: #30363d;
+  --syntax-text: #e6edf3;
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-function: #d2a8ff;
+  --syntax-variable: #ffa657;
+  --syntax-number: #79c0ff;
+  --syntax-type: #7ee787;
+  --syntax-operator: #ff7b72;
+  --syntax-constant: #79c0ff;
+  --syntax-punctuation: #8b949e;
+  --syntax-badge-bg: #21262d;
+  --syntax-badge-text: #8b949e;
+
+  /* クイックオープン（ダーク） */
+  --quick-open-bg: #1e2228;
+  --quick-open-header-bg: #1e2228;
+  --quick-open-border: #30363d;
+  --quick-open-selected-bg: #1f6feb;
+  --quick-open-selected-text: #ffffff;
+  --quick-open-hover-bg: #282e36;
+  --quick-open-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+

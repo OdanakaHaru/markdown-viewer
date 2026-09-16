@@ -1,0 +1,208 @@
+﻿/* ツールバー */
+.toolbar {
+  height: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  background-color: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  z-index: 10;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.toolbar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toolbar-icon-btn:hover {
+  background-color: var(--bg-sidebar-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-icon-btn.active {
+  background-color: var(--bg-sidebar-selected);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  cursor: pointer;
+  background-color: var(--btn-green);
+  color: #ffffff;
+  border: 1px solid rgba(27, 31, 36, 0.15);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(27, 31, 36, 0.04);
+  transition: background-color 0.2s ease, width 0.15s ease, padding 0.15s ease;
+  box-sizing: border-box;
+}
+
+.toolbar-btn:hover {
+  background-color: var(--btn-green-hover);
+}
+
+.toolbar-btn .btn-icon {
+  width: 14px;
+  height: 14px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.toolbar-btn-text {
+  white-space: nowrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   ツールバー中央 クイックオープン検索ボタン (VS Code風)
+   ========================================================================== */
+.toolbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 460px;
+  min-width: 0;
+  margin: 0 16px;
+}
+
+.toolbar-quick-open-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 380px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.toolbar-quick-open-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.quick-open-btn-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.quick-open-btn-label {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-open-btn-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   ツールバー レスポンシブ対応
+   ========================================================================== */
+
+@media (max-width: 660px) {
+  .toolbar-btn .toolbar-btn-text {
+    display: none;
+  }
+  .toolbar-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+  .toolbar-btn .btn-icon {
+    width: 16px;
+    height: 16px;
+  }
+  .quick-open-btn-kbd {
+    display: none;
+  }
+  .toolbar-center {
+    margin: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    padding: 0 8px;
+  }
+  .toolbar-left,
+  .toolbar-right {
+    gap: 4px;
+  }
+  .toolbar-center {
+    margin: 0 4px;
+  }
+  .quick-open-btn-label {
+    display: none;
+  }
+  .quick-open-btn-icon {
+    margin-right: 0;
+  }
+  .toolbar-quick-open-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 6px;
+  }
+}
+

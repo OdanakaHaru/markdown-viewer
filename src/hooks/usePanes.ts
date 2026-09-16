@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { PaneItem, TabItem } from '../types';
 import { generateId } from '../utils/id';
 import { normalizePath } from '../utils/path';
+import { getNextActiveTabId, getTabByIndex } from '../utils/tab';
 
 /** 閉じたタブの履歴保持上限 */
 const MAX_CLOSED_TABS_HISTORY = 10;
@@ -99,10 +100,7 @@ export function usePanes() {
       setPanes((prev) =>
         prev.map((pane) => {
           if (pane.id === paneId) {
-            let newActiveTabId = pane.activeTabId;
-            if (pane.activeTabId === tabId) {
-              newActiveTabId = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
-            }
+            const newActiveTabId = getNextActiveTabId(pane.tabs, tabId, pane.activeTabId);
             return { ...pane, tabs: newTabs, activeTabId: newActiveTabId };
           }
           return pane;
@@ -220,10 +218,7 @@ export function usePanes() {
         newPanes = newPanes.map((p) => {
           if (p.id === sourcePaneId) {
             const newTabs = p.tabs.filter((t) => t.id !== tabId);
-            let newActiveTabId = p.activeTabId;
-            if (p.activeTabId === tabId) {
-              newActiveTabId = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
-            }
+            const newActiveTabId = getNextActiveTabId(p.tabs, tabId, p.activeTabId);
             return { ...p, tabs: newTabs, activeTabId: newActiveTabId };
           }
           return p;
@@ -271,9 +266,11 @@ export function usePanes() {
   const goToNthTab = useCallback(
     (n: number) => {
       const pane = panes.find((p) => p.id === activePaneId);
-      if (!pane || pane.tabs.length === 0) return;
-      const index = n === 9 ? pane.tabs.length - 1 : Math.min(n - 1, pane.tabs.length - 1);
-      handleSelectTab(activePaneId, pane.tabs[index].id);
+      if (!pane) return;
+      const targetTab = getTabByIndex(pane.tabs, n);
+      if (targetTab) {
+        handleSelectTab(activePaneId, targetTab.id);
+      }
     },
     [panes, activePaneId, handleSelectTab]
   );

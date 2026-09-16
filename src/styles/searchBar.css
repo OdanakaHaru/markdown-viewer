@@ -1,0 +1,156 @@
+﻿/* ==========================================================================
+   フローティング検索バー (Ctrl + F)
+   ========================================================================== */
+.search-bar-floating {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  animation: search-bar-fade-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+[data-theme="dark"] .search-bar-floating {
+  background-color: rgba(22, 27, 34, 0.92);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes search-bar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.search-bar-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 8px 0 26px;
+  height: 28px;
+}
+
+.search-bar-input-wrap:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.search-bar-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-bar-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  width: 140px;
+  padding: 0;
+}
+
+.search-bar-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-bar-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  margin-left: 6px;
+  user-select: none;
+}
+
+.search-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.search-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.search-bar-btn:hover:not(:disabled) {
+  background-color: var(--bg-sidebar-hover);
+  color: var(--text-primary);
+}
+
+.search-bar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.search-bar-close-btn:hover {
+  background-color: rgba(207, 34, 46, 0.15);
+  color: #cf222e;
+}
+
+[data-theme="dark"] .search-bar-close-btn:hover {
+  background-color: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+/* ==========================================================================
+   テキスト検索ハイライト
+   ========================================================================== */
+mark.search-highlight {
+  background-color: rgba(255, 224, 0, 0.45);
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 1px;
+  box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.4);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-theme="dark"] mark.search-highlight {
+  background-color: rgba(234, 179, 8, 0.35);
+  color: inherit;
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.5);
+}
+
+mark.search-highlight.search-highlight-active {
+  background-color: #ff9800;
+  color: #000000;
+  box-shadow: 0 0 0 2px #f57c00, 0 1px 4px rgba(0, 0, 0, 0.25);
+  font-weight: 600;
+}
+
+[data-theme="dark"] mark.search-highlight.search-highlight-active {
+  background-color: #f59e0b;
+  color: #0d1117;
+  box-shadow: 0 0 0 2px #fbbf24, 0 1px 6px rgba(0, 0, 0, 0.5);
+  font-weight: 600;
+}
+

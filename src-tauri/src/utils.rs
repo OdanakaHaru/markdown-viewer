@@ -66,3 +66,23 @@ pub fn paths_match(p1: &Path, p2: &Path) -> bool {
     let trim2 = s2.trim_start_matches("//?/").trim_start_matches("\\\\?\\");
     trim1 == trim2
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_urlencoding_decode_japanese() {
+        let encoded = "%E3%80%90%E7%94%BB%E9%9D%A2%E8%A8%AD%E8%A8%88%E6%9B%B8%E3%80%91%20%E7%AE%A1%E7%90%86%E8%80%85_%E4%BA%88%E7%B4%84%E7%85%A7%E4%BC%9A.md";
+        let decoded = urlencoding_decode(encoded);
+        assert_eq!(decoded, "【画面設計書】 管理者_予約照会.md");
+    }
+
+    #[test]
+    fn test_urlencoding_decode_ascii_and_symbols() {
+        let encoded = "folder%20name/sub%2Bdir/file-1.md";
+        let decoded = urlencoding_decode(encoded);
+        assert_eq!(decoded, "folder name/sub+dir/file-1.md");
+    }
+}
+

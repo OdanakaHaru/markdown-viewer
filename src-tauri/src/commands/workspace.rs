@@ -54,3 +54,39 @@ pub fn list_workspace_markdown_files(path: String) -> Result<Vec<QuickOpenFileIt
     result.sort_by(|a, b| a.relative_path.to_lowercase().cmp(&b.relative_path.to_lowercase()));
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_workspace_markdown_files() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "md_viewer_ws_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let sub_dir = temp_dir.join("sub");
+        fs::create_dir_all(&sub_dir).unwrap();
+
+        let f1 = temp_dir.join("root.md");
+        let f2 = sub_dir.join("child.markdown");
+        let f3 = temp_dir.join("skip.txt");
+
+        fs::write(&f1, "# Root").unwrap();
+        fs::write(&f2, "# Child").unwrap();
+        fs::write(&f3, "Text").unwrap();
+
+        let files = list_workspace_markdown_files(temp_dir.to_string_lossy().into_owned()).unwrap();
+        assert_eq!(files.len(), 2);
+        // 相対パス順でソートされている
+        assert_eq!(files[0].name, "root.md");
+        assert_eq!(files[1].name, "child.markdown");
+        assert_eq!(files[1].relative_path, "sub/child.markdown");
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+}
+

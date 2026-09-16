@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { TocItem } from '../types';
-import { slugify } from '../utils/path';
+import { extractTocItems, getHeadingId } from '../utils/toc';
 
 interface UseTocOptions {
   activeContent: string | undefined;
@@ -31,21 +31,16 @@ export function useToc({ activeContent, activePaneId }: UseTocOptions) {
         return;
       }
 
+      // レンダリングされた DOM 要素にアンカー用 ID を付与（スクロール連動・ジャンプ用）
       const headings = activePaneElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      const items: TocItem[] = [];
       headings.forEach((el, index) => {
-        const level = parseInt(el.tagName.substring(1), 10);
-        let id = el.id;
-        if (!id) {
-          id = `heading-${index}-${slugify(el.textContent || '')}`;
-          el.id = id;
+        if (!el.id) {
+          el.id = getHeadingId(index, el.textContent || '');
         }
-        items.push({
-          id,
-          text: (el.textContent || '').trim(),
-          level,
-        });
       });
+
+      // HTML文字列から目次項目を抽出
+      const items = extractTocItems(activeContent);
       setTocItems(items);
     }, 60);
 

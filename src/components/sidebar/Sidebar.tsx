@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { FileEntry, SidebarView, TocItem } from '../types';
+import type { FileEntry, TocItem } from '../../types';
 import { FileTreeItem } from './FileTree';
 import { TocView } from './TocView';
 import {
@@ -8,24 +8,14 @@ import {
   CollapseAllIcon,
   SidebarToggleIcon,
   TocIcon,
-} from './Icons';
+} from '../common/Icons';
+import { useWorkspaceContext, useUIContext, usePaneContext } from '../../contexts';
 
-interface SidebarProps {
-  folderPath: string | null;
-  folderName: string | null;
-  selectedFilePath: string | null;
-  rootEntries: FileEntry[];
-  isLoadingRoot: boolean;
-  onOpenFolder: () => void;
-  onRefresh: () => void;
+export interface SidebarProps {
   onSelectFile: (path: string) => void;
-  onToggleSidebar: () => void;
-  currentView: SidebarView;
-  onChangeView: (view: SidebarView) => void;
   tocItems: TocItem[];
   activeHeadingId: string | null;
   onSelectHeading: (id: string) => void;
-  hasActiveTab: boolean;
   onContextMenuFile?: (e: React.MouseEvent, entry: FileEntry) => void;
 }
 
@@ -34,23 +24,31 @@ const MAX_SIDEBAR_WIDTH = 600;
 const DEFAULT_SIDEBAR_WIDTH = 260;
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  folderPath,
-  folderName,
-  selectedFilePath,
-  rootEntries,
-  isLoadingRoot,
-  onOpenFolder,
-  onRefresh,
   onSelectFile,
-  onToggleSidebar,
-  currentView,
-  onChangeView,
   tocItems,
   activeHeadingId,
   onSelectHeading,
-  hasActiveTab,
   onContextMenuFile,
 }) => {
+  const {
+    folderPath,
+    folderName,
+    rootEntries,
+    isLoadingRoot,
+    handleOpenFolder,
+    handleRefreshFolder,
+  } = useWorkspaceContext();
+
+  const {
+    sidebarView,
+    setSidebarView,
+    closeSidebar,
+  } = useUIContext();
+
+  const { activeTab } = usePaneContext();
+  const hasActiveTab = Boolean(activeTab);
+  const selectedFilePath = activeTab?.isStandalone ? null : (activeTab?.filePath || null);
+
   const [collapseAllTrigger, setCollapseAllTrigger] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
@@ -102,8 +100,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-nav-tabs">
         <button
           type="button"
-          className={`sidebar-nav-tab ${currentView === 'explorer' ? 'active' : ''}`}
-          onClick={() => onChangeView('explorer')}
+          className={`sidebar-nav-tab ${sidebarView === 'explorer' ? 'active' : ''}`}
+          onClick={() => setSidebarView('explorer')}
           title="エクスプローラー"
         >
           <FolderOpenBtnIcon className="sidebar-tab-icon" />
@@ -111,8 +109,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
         <button
           type="button"
-          className={`sidebar-nav-tab ${currentView === 'toc' ? 'active' : ''}`}
-          onClick={() => onChangeView('toc')}
+          className={`sidebar-nav-tab ${sidebarView === 'toc' ? 'active' : ''}`}
+          onClick={() => setSidebarView('toc')}
           title="目次 / アウトライン"
         >
           <TocIcon className="sidebar-tab-icon" />
@@ -121,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="sidebar-header">
-        {currentView === 'explorer' ? (
+        {sidebarView === 'explorer' ? (
           <>
             <div className="sidebar-title-section">
               <span className="sidebar-section-title">エクスプローラー</span>
@@ -131,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 className="sidebar-action-btn"
-                onClick={onOpenFolder}
+                onClick={handleOpenFolder}
                 title="フォルダを開く"
               >
                 <FolderOpenBtnIcon />
@@ -141,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     className="sidebar-action-btn"
-                    onClick={onRefresh}
+                    onClick={handleRefreshFolder}
                     title="最新の情報に更新"
                   >
                     <RefreshIcon />
@@ -159,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 className="sidebar-action-btn"
-                onClick={onToggleSidebar}
+                onClick={closeSidebar}
                 title="サイドバーを非表示"
               >
                 <SidebarToggleIcon />
@@ -175,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 className="sidebar-action-btn"
-                onClick={onToggleSidebar}
+                onClick={closeSidebar}
                 title="サイドバーを非表示"
               >
                 <SidebarToggleIcon />
@@ -186,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="sidebar-content">
-        {currentView === 'toc' ? (
+        {sidebarView === 'toc' ? (
           <TocView
             items={tocItems}
             activeId={activeHeadingId}
@@ -221,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               className="open-folder-btn"
-              onClick={onOpenFolder}
+              onClick={handleOpenFolder}
             >
               フォルダを開く
             </button>

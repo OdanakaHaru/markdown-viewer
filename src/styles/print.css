@@ -1,0 +1,120 @@
+﻿/* ==========================================================================
+   Print / PDF Export Styles (@media print)
+   ========================================================================== */
+
+@media print {
+  /* 非表示にするUI要素 */
+  .toolbar,
+  .sidebar,
+  .sidebar-resizer,
+  .tab-bar,
+  .document-header,
+  .settings-modal-overlay,
+  .quick-open-overlay,
+  .search-bar,
+  .context-menu,
+  .context-submenu,
+  .drag-overlay,
+  .error,
+  .code-copy-btn,
+  .pane:not(.active-pane) {
+    display: none !important;
+  }
+
+  /* 印刷対象ペインをページ全体に展開 */
+  html,
+  body,
+  .container,
+  .main-layout,
+  .content-area,
+  .panes-container,
+  .pane,
+  .pane-content,
+  .markdown-container,
+  .markdown-body {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    background: #ffffff !important;
+    color: #1f2328 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .markdown-body {
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    padding: 0 !important;
+  }
+
+  /* ページ余白設定 */
+  @page {
+    margin: 15mm 20mm;
+    size: auto;
+  }
+
+  /* 改ページ制御 */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    color: #1f2328 !important;
+  }
+
+  pre,
+  blockquote,
+  table,
+  img,
+  figure {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* テーブル印刷最適化 */
+  .markdown-body table {
+    display: table !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .markdown-body table th,
+  .markdown-body table td {
+    border: 1px solid #d0d7de !important;
+    padding: 6px 10px !important;
+  }
+
+  .markdown-body table th {
+    background-color: #f6f8fa !important;
+  }
+
+  /* コードブロック印刷最適化 */
+  .markdown-body pre {
+    background: #f6f8fa !important;
+    border: 1px solid #d0d7de !important;
+    border-radius: 4px !important;
+    padding: 12px !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    font-size: 9pt !important;
+  }
+
+  .markdown-body pre code {
+    background: transparent !important;
+    color: #1f2328 !important;
+    font-size: 9pt !important;
+  }
+
+  /* リンクの表示 */
+  .markdown-body a {
+    color: #0969da !important;
+    text-decoration: underline !important;
+  }
+}
+

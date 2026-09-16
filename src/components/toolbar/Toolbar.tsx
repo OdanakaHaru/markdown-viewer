@@ -1,5 +1,4 @@
 import React from 'react';
-import type { SidebarView, ThemeMode } from '../types';
 import {
   SidebarToggleIcon,
   FolderOpenBtnIcon,
@@ -10,50 +9,45 @@ import {
   PrintIcon,
   TocIcon,
   SearchIcon,
-} from './Icons';
+  DiffIcon,
+} from '../common/Icons';
+import { useUIContext, useWorkspaceContext, usePaneContext } from '../../contexts';
 
-interface ToolbarProps {
-  isSidebarOpen: boolean;
-  sidebarView: SidebarView;
-  onToggleExplorer: () => void;
-  onToggleToc: () => void;
-  onOpenFolder: () => void;
+export interface ToolbarProps {
   onOpenFile: () => void;
-  onOpenQuickOpen: () => void;
-  folderName: string | null;
-  hasActiveTab: boolean;
+  onOpenDiff: () => void;
   onPrint: () => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
-  onOpenSettings: () => void;
-  themeMode: ThemeMode;
-  effectiveTheme: 'light' | 'dark';
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
-  isSidebarOpen,
-  sidebarView,
-  onToggleExplorer,
-  onToggleToc,
-  onOpenFolder,
   onOpenFile,
-  onOpenQuickOpen,
-  folderName,
-  hasActiveTab,
+  onOpenDiff,
   onPrint,
-  isFullscreen,
-  onToggleFullscreen,
-  onOpenSettings,
-  themeMode,
-  effectiveTheme,
 }) => {
+  const {
+    isSidebarOpen,
+    sidebarView,
+    handleToggleExplorer,
+    handleToggleToc,
+    isFullscreen,
+    toggleFullscreen,
+    setIsSettingsOpen,
+    themeMode,
+    effectiveTheme,
+    handleOpenQuickOpen,
+  } = useUIContext();
+
+  const { folderName, handleOpenFolder } = useWorkspaceContext();
+  const { activeTab } = usePaneContext();
+  const hasActiveTab = Boolean(activeTab);
+
   return (
     <header className="toolbar">
       <div className="toolbar-left">
         <button
           type="button"
           className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'explorer' ? 'active' : ''}`}
-          onClick={onToggleExplorer}
+          onClick={handleToggleExplorer}
           title={
             isSidebarOpen && sidebarView === 'explorer'
               ? 'サイドバーを非表示 (Ctrl+B)'
@@ -65,7 +59,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className={`toolbar-icon-btn ${isSidebarOpen && sidebarView === 'toc' ? 'active' : ''}`}
-          onClick={onToggleToc}
+          onClick={handleToggleToc}
           title={isSidebarOpen && sidebarView === 'toc' ? '目次を非表示' : '目次 / アウトラインを表示'}
         >
           <TocIcon />
@@ -73,7 +67,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className="toolbar-btn toolbar-btn-folder"
-          onClick={onOpenFolder}
+          onClick={handleOpenFolder}
           title="フォルダを開く"
         >
           <FolderOpenBtnIcon className="btn-icon" />
@@ -95,7 +89,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className="toolbar-quick-open-btn"
-          onClick={onOpenQuickOpen}
+          onClick={handleOpenQuickOpen}
           title="ファイルをクイックオープン (Ctrl+P)"
         >
           <SearchIcon className="quick-open-btn-icon" />
@@ -110,8 +104,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className="toolbar-icon-btn"
+          onClick={() => onOpenDiff()}
+          title="別ファイルと差分比較..."
+          disabled={!hasActiveTab}
+        >
+          <DiffIcon />
+        </button>
+        <button
+          type="button"
+          className="toolbar-icon-btn"
           onClick={onPrint}
-          title={hasActiveTab ? '印刷 / PDF保存 (Ctrl+Shift+P)' : 'タブが開かれていません'}
+          title="印刷 / PDF出力 (Ctrl+Shift+P)"
           disabled={!hasActiveTab}
         >
           <PrintIcon />
@@ -119,7 +122,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className={`toolbar-icon-btn ${isFullscreen ? 'active' : ''}`}
-          onClick={onToggleFullscreen}
+          onClick={toggleFullscreen}
           title={isFullscreen ? '全画面表示を解除 (F11)' : '全画面表示 (F11)'}
         >
           {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
@@ -127,7 +130,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           type="button"
           className="toolbar-icon-btn"
-          onClick={onOpenSettings}
+          onClick={() => setIsSettingsOpen(true)}
           title={`設定 (現在のテーマ: ${
             themeMode === 'system'
               ? `システム連動 [${effectiveTheme === 'dark' ? 'ダーク' : 'ライト'}]`

@@ -180,3 +180,9 @@ export const ExplorerIcon: React.FC<{ className?: string }> = ({ className }) =>
 
 
 
+
+export const DiffIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path fillRule="evenodd" d="M1.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H1.75zM0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75zm5.75 2.5a.75.75 0 0 0-1.5 0v2h-2a.75.75 0 0 0 0 1.5h2v2a.75.75 0 0 0 1.5 0v-2h2a.75.75 0 0 0 0-1.5h-2v-2zM12 9H9a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5z"/>
+  </svg>
+);

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { PaneItem, TabItem } from '../types';
 import { generateId } from '../utils/id';
+import { findTabByPath } from '../utils/tab';
 import {
   isMarkdownFile,
   getParentDirPath,
@@ -107,16 +108,11 @@ export function useFileOperations({
   // クイックオープンからのファイル選択処理（既存タブがあれば切り替え、なければ新規オープン）
   const handleQuickOpenFile = useCallback(
     (targetFilePath: string) => {
-      const normTarget = normalizePath(targetFilePath);
-      for (const p of panes) {
-        const found = p.tabs.find(
-          (t) => normalizePath(t.filePath) === normTarget
-        );
-        if (found) {
-          setActivePaneId(p.id);
-          handleSelectTab(p.id, found.id);
-          return;
-        }
+      const found = findTabByPath(panes, targetFilePath);
+      if (found) {
+        setActivePaneId(found.paneId);
+        handleSelectTab(found.paneId, found.tab.id);
+        return;
       }
       handleSelectFile(targetFilePath);
     },

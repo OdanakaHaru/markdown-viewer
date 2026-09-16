@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ContextMenuItem, ContextMenuState } from '../types';
+import type { ContextMenuItem, ContextMenuState } from '../../types';
 import { ChevronRightIcon } from './Icons';
 
 interface ContextMenuProps {

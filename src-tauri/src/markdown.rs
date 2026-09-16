@@ -85,3 +85,19 @@ pub fn parse_markdown_to_html(md: &str) -> String {
 
     html_with_ids.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_markdown_syntax_highlight() {
+        let md = "```rust\nfn main() {\n    let x = 42;\n}\n```";
+        let html = parse_markdown_to_html(md);
+        assert!(html.contains("code-block-container"));
+        assert!(html.contains("language-rust"));
+        assert!(html.contains("source rust"));
+        assert!(html.contains("code-block-copy-btn"));
+    }
+}
+

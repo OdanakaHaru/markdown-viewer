@@ -1,0 +1,590 @@
+﻿/* ==========================================================================
+   ライトモード対応: Markdown表示エリア (OSダークモード時の強制ライトモード用)
+   ========================================================================== */
+.markdown-container[data-theme="light"] {
+  background-color: #ffffff;
+  color: #24292f;
+}
+
+.markdown-container[data-theme="light"] .document-header {
+  background-color: #fafbfc;
+  border-bottom: 1px solid #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .document-title {
+  color: #24292f;
+}
+
+.markdown-container[data-theme="light"] .document-path {
+  color: #57606a;
+}
+
+.markdown-container[data-theme="light"] .markdown-body {
+  background-color: #ffffff;
+  color: #24292f;
+  color-scheme: light;
+  
+  /* github-markdown-css (v5+) のライトモード用変数 */
+  --fgColor-default: #1f2328;
+  --fgColor-muted: #656d76;
+  --fgColor-accent: #0969da;
+  --fgColor-success: #1a7f37;
+  --fgColor-attention: #9a6700;
+  --fgColor-danger: #d1242f;
+  --fgColor-done: #8250df;
+  --bgColor-default: #ffffff;
+  --bgColor-muted: #f6f8fa;
+  --bgColor-neutral-muted: #818b981f;
+  --bgColor-attention-muted: #fff8c5;
+  --borderColor-default: #d1d9e0;
+  --borderColor-muted: #d0d7de;
+  --borderColor-neutral-emphasis: #8c959f;
+  --borderColor-accent-emphasis: #0969da;
+  --borderColor-success-emphasis: #1a7f37;
+  --borderColor-attention-emphasis: #9a6700;
+  --borderColor-danger-emphasis: #cf222e;
+  --borderColor-done-emphasis: #8250df;
+
+  /* 旧バージョンの互換性用 */
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f8fa;
+  --color-border-default: #d0d7de;
+  --color-border-muted: hsla(210,18%,87%,1);
+  --color-fg-default: #24292f;
+  --color-fg-muted: #57606a;
+  --color-fg-subtle: #6e7681;
+  --color-accent-fg: #0969da;
+}
+
+.markdown-container[data-theme="light"] .markdown-body a {
+  color: #0969da;
+}
+
+.markdown-container[data-theme="light"] .markdown-body a:hover {
+  color: #0854b0;
+}
+
+.markdown-container[data-theme="light"] .markdown-body hr {
+  background-color: #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body blockquote {
+  color: #57606a;
+  border-left-color: #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body table tr {
+  background-color: #ffffff;
+  border-top-color: #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+.markdown-container[data-theme="light"] .markdown-body table th,
+.markdown-container[data-theme="light"] .markdown-body table td {
+  border-color: #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body code,
+.markdown-container[data-theme="light"] .markdown-body tt {
+  background-color: rgba(175, 184, 193, 0.2);
+}
+
+.markdown-container[data-theme="light"] .markdown-body pre code {
+  background-color: transparent;
+}
+
+.markdown-container[data-theme="light"] .markdown-body pre {
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body h1,
+.markdown-container[data-theme="light"] .markdown-body h2 {
+  border-bottom-color: #d0d7de;
+}
+
+.markdown-container[data-theme="light"] .markdown-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.markdown-container[data-theme="light"] .markdown-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================================================
+   ダークモード対応: Markdown表示エリア
+   ========================================================================== */
+.markdown-container[data-theme="dark"] {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.markdown-container[data-theme="dark"] .document-header {
+  background-color: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+
+.markdown-container[data-theme="dark"] .document-title {
+  color: #f0f6fc;
+}
+
+.markdown-container[data-theme="dark"] .document-path {
+  color: #8b949e;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  color-scheme: dark;
+  /* github-markdown-css のCSS変数をダークモード用に上書き */
+  --color-canvas-default: #0d1117;
+  --color-canvas-subtle: #161b22;
+  --color-border-default: #30363d;
+  --color-border-muted: #21262d;
+  --color-fg-default: #c9d1d9;
+  --color-fg-muted: #8b949e;
+  --color-fg-subtle: #6e7681;
+  --color-accent-fg: #58a6ff;
+  --color-prettylights-syntax-comment: #8b949e;
+  --color-prettylights-syntax-constant: #79c0ff;
+  --color-prettylights-syntax-entity: #d2a8ff;
+  --color-prettylights-syntax-storage-modifier-import: #c9d1d9;
+  --color-prettylights-syntax-entity-tag: #7ee787;
+  --color-prettylights-syntax-keyword: #ff7b72;
+  --color-prettylights-syntax-string: #a5d6ff;
+  --color-prettylights-syntax-variable: #ffa657;
+  --color-prettylights-syntax-string-regexp: #7ee787;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body a {
+  color: #58a6ff;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body a:hover {
+  color: #79c0ff;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body hr {
+  background-color: #30363d;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body blockquote {
+  color: #8b949e;
+  border-left-color: #3b434b;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body table tr {
+  background-color: #0d1117;
+  border-top-color: #30363d;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body table tr:nth-child(2n) {
+  background-color: #161b22;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body table th,
+.markdown-container[data-theme="dark"] .markdown-body table td {
+  border-color: #30363d;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body code,
+.markdown-container[data-theme="dark"] .markdown-body tt {
+  background-color: rgba(110, 118, 129, 0.4);
+}
+
+.markdown-container[data-theme="dark"] .markdown-body pre code {
+  background-color: transparent;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body pre {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body h1,
+.markdown-container[data-theme="dark"] .markdown-body h2 {
+  border-bottom-color: #21262d;
+}
+
+.markdown-container[data-theme="dark"] .markdown-body::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.markdown-container[data-theme="dark"] .markdown-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ==========================================================================
+   Markdown Image & Fallback Styles
+   ========================================================================== */
+
+.markdown-body .markdown-rendered-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 12px 0;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.markdown-body a > .markdown-rendered-image {
+  cursor: pointer;
+}
+
+.markdown-body a > .markdown-rendered-image:hover {
+  opacity: 0.92;
+}
+
+/* 画像読み込み中インジケータ */
+.markdown-image-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 8px 0;
+  background-color: var(--bg-sidebar);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.markdown-image-loading .loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 画像読み込みエラー・フォールバックカード */
+.markdown-image-fallback {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  margin: 8px 0;
+  background-color: rgba(207, 34, 46, 0.06);
+  border: 1px solid rgba(207, 34, 46, 0.25);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  max-width: 100%;
+  word-break: break-all;
+}
+
+[data-theme="dark"] .markdown-image-fallback {
+  background-color: rgba(248, 81, 73, 0.1);
+  border-color: rgba(248, 81, 73, 0.3);
+}
+
+.markdown-image-fallback .fallback-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.markdown-image-fallback .fallback-label {
+  font-weight: 500;
+  color: #cf222e;
+}
+
+[data-theme="dark"] .markdown-image-fallback .fallback-label {
+  color: #ff7b72;
+}
+
+.markdown-image-fallback .fallback-path {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* ==========================================================================
+   Markdown Table Styling Enhancements
+   ========================================================================== */
+
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  border-spacing: 0;
+  border-collapse: collapse;
+  border-radius: 6px;
+}
+
+.markdown-body table th {
+  font-weight: 600;
+  padding: 8px 14px;
+  text-align: left;
+}
+
+.markdown-body table td {
+  padding: 8px 14px;
+}
+
+.markdown-body table tr {
+  transition: background-color 0.1s ease;
+}
+
+.markdown-body table tr:hover {
+  background-color: rgba(140, 149, 159, 0.08);
+}
+
+/* ==========================================================================
+   Code Block Copy Button
+   ========================================================================== */
+
+.markdown-body pre {
+  position: relative;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  z-index: 2;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.markdown-body pre:hover .code-copy-btn,
+.code-copy-btn:focus,
+.code-copy-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.code-copy-btn:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.code-copy-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.code-copy-btn .check-svg {
+  display: none;
+}
+
+.code-copy-btn .copy-svg {
+  display: inline-block;
+}
+
+.code-copy-btn.copied {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+  color: #1a7f37;
+  border-color: rgba(31, 136, 61, 0.4);
+  background: rgba(46, 160, 67, 0.1);
+}
+
+[data-theme="dark"] .code-copy-btn.copied {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.4);
+  background: rgba(63, 185, 80, 0.15);
+}
+
+.code-copy-btn.copied .copy-svg {
+  display: none;
+}
+
+.code-copy-btn.copied .check-svg {
+  display: inline-block;
+  color: currentColor;
+}
+
+/* ==========================================================================
+   コードブロックの軽量シンタックスハイライト (syntect連携)
+   ========================================================================== */
+.markdown-body .code-block-container {
+  position: relative;
+  margin: 1.2em 0;
+  border-radius: 8px;
+  border: 1px solid var(--syntax-border);
+  background-color: var(--syntax-bg);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.markdown-body .code-block-container:hover {
+  border-color: rgba(9, 105, 218, 0.4);
+}
+
+[data-theme="dark"] .markdown-body .code-block-container:hover {
+  border-color: rgba(88, 166, 255, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* コードブロックヘッダー */
+.markdown-body .code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: var(--syntax-header-bg);
+  border-bottom: 1px solid var(--syntax-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  user-select: none;
+}
+
+.markdown-body .code-block-lang {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--syntax-badge-text);
+  background-color: var(--syntax-badge-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* コードコピーボタン */
+.markdown-body .code-block-copy-btn,
+.markdown-body .code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--font-family);
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.markdown-body .code-block-copy-btn:hover,
+.markdown-body .code-copy-btn:hover {
+  background-color: var(--bg-sidebar-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.markdown-body .code-block-copy-btn.copied,
+.markdown-body .code-copy-btn.copied {
+  color: var(--btn-green);
+  border-color: var(--btn-green);
+  background-color: rgba(46, 160, 67, 0.1);
+}
+
+.markdown-body .code-block-container pre {
+  margin: 0 !important;
+  padding: 14px 16px !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow-x: auto;
+}
+
+.markdown-body .code-block-container pre code {
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+  color: var(--syntax-text);
+  background-color: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  tab-size: 2;
+}
+
+/* 構文強調トークンクラス (syntect ClassStyle::Spaced) */
+.markdown-body code .comment {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+.markdown-body code .keyword,
+.markdown-body code .keyword.control,
+.markdown-body code .keyword.operator {
+  color: var(--syntax-keyword);
+  font-weight: 500;
+}
+
+.markdown-body code .storage,
+.markdown-body code .storage.type,
+.markdown-body code .storage.modifier {
+  color: var(--syntax-keyword);
+  font-weight: 500;
+}
+
+.markdown-body code .string,
+.markdown-body code .string.quoted {
+  color: var(--syntax-string);
+}
+
+.markdown-body code .entity.name.function,
+.markdown-body code .support.function {
+  color: var(--syntax-function);
+  font-weight: 500;
+}
+
+.markdown-body code .entity.name.type,
+.markdown-body code .entity.name.class,
+.markdown-body code .support.type,
+.markdown-body code .support.class {
+  color: var(--syntax-type);
+  font-weight: 500;
+}
+
+.markdown-body code .variable,
+.markdown-body code .variable.parameter,
+.markdown-body code .variable.other {
+  color: var(--syntax-variable);
+}
+
+.markdown-body code .constant,
+.markdown-body code .constant.numeric,
+.markdown-body code .constant.language {
+  color: var(--syntax-constant);
+}
+
+.markdown-body code .punctuation {
+  color: var(--syntax-punctuation);
+}
+

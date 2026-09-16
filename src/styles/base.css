@@ -1,0 +1,154 @@
+﻿* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  overflow: hidden;
+}
+
+/* メインレイアウト */
+.main-layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* エラーメッセージ */
+.error {
+  color: #cf222e;
+  padding: 10px 16px;
+  background-color: #ffebe9;
+  border-bottom: 1px solid rgba(255, 129, 130, 0.4);
+  font-size: 14px;
+  user-select: none;
+}
+
+[data-theme="dark"] .error {
+  color: #ff7b72;
+  background-color: rgba(248, 81, 73, 0.15);
+  border-bottom-color: rgba(248, 81, 73, 0.4);
+}
+
+/* エンプティステート */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 32px;
+  text-align: center;
+  user-select: none;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.empty-action-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.empty-action-btn.primary {
+  background-color: var(--btn-green);
+  color: #ffffff;
+  border: 1px solid rgba(27, 31, 36, 0.15);
+}
+
+.empty-action-btn.primary:hover {
+  background-color: var(--btn-green-hover);
+}
+
+.empty-action-btn.secondary {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.empty-action-btn.secondary:hover {
+  background-color: var(--bg-sidebar-hover);
+}
+
+/* ドラッグ＆ドロップ オーバーレイ */
+.drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(246, 248, 250, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drag-overlay-content {
+  border: 2px dashed #0969da;
+  border-radius: 12px;
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.2);
+}
+
+.drag-overlay-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.drag-overlay-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0969da;
+}
+

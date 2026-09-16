@@ -20,6 +20,31 @@ export interface TabItem {
   content: string;     // パースされたHTMLまたはMarkdown
   scrollTop?: number;  // ペインごとの独立したスクロール位置（任意）
   isStandalone?: boolean; // フォルダ配下ではなく単体（D&D等）で開かれたファイルかどうか
+  isDiff?: boolean;    // Diff仮想タブかどうか
+  diffResult?: DiffResult; // Diff結果データ
+  diffViewMode?: DiffViewMode; // 'visual' または 'split'
+}
+
+export type DiffViewMode = 'visual' | 'split' | 'split-visual';
+
+export interface DiffLineDto {
+  kind: string; // 'equal' | 'delete' | 'insert'
+  text: string;
+  line_idx: number | null;
+}
+
+export interface DiffStats {
+  additions: number;
+  deletions: number;
+}
+
+export interface DiffResult {
+  unified_html: string;
+  old_html: string;
+  new_html: string;
+  left_lines: DiffLineDto[];
+  right_lines: DiffLineDto[];
+  stats: DiffStats;
 }
 
 export interface PaneItem {

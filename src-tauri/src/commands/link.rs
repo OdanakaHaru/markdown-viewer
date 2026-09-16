@@ -132,3 +132,22 @@ pub fn resolve_link_target(
 pub fn open_external(target: String) -> Result<(), String> {
     open::that_detached(&target).map_err(|e| format!("外部アプリケーションの起動に失敗しました: {}", e))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_link_target_relative() {
+        let base_file = Some("C:\\Users\\test\\Docs\\intro.md".to_string());
+        let res = resolve_link_target(
+            base_file,
+            None,
+            "%E3%80%90%E7%94%BB%E9%9D%A2%E8%A8%AD%E8%A8%88%E6%9B%B8%E3%80%91.md".to_string(),
+        );
+        assert_eq!(res.kind, "markdown_not_found");
+        assert!(res.target.contains("【画面設計書】.md"));
+        assert!(!res.target.contains("ç®¡"));
+    }
+}
+

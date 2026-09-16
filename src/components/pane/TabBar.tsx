@@ -1,6 +1,6 @@
 import React from 'react';
-import type { TabItem } from '../types';
-import { CloseIcon, SplitPaneIcon } from './Icons';
+import type { TabItem } from '../../types';
+import { CloseIcon, SplitPaneIcon } from '../common/Icons';
 
 interface TabBarProps {
   paneId: string;

@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import 'github-markdown-css/github-markdown.css';
 import './App.css';
-import type { SidebarView } from './types';
-import { Sidebar } from './components/Sidebar';
-import { SettingsModal } from './components/SettingsModal';
-import { QuickOpenModal } from './components/QuickOpenModal';
-import { MarkdownPane } from './components/MarkdownPane';
-import { ContextMenu } from './components/ContextMenu';
-import { Toolbar } from './components/Toolbar';
-import { CloseIcon } from './components/Icons';
+import { Sidebar } from './components/sidebar';
+import { SettingsModal, QuickOpenModal, DiffSelectModal } from './components/modals';
+import { MarkdownPane } from './components/pane';
+import { ContextMenu, ErrorBanner, DragOverlay } from './components/common';
+import { Toolbar } from './components/toolbar';
+import {
+  WorkspaceProvider,
+  useWorkspaceContext,
+  PaneProvider,
+  usePaneContext,
+  UIProvider,
+  useUIContext,
+} from './contexts';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { useTheme } from './hooks/useTheme';
-import { useFullscreen } from './hooks/useFullscreen';
-import { usePanes } from './hooks/usePanes';
-import { useWorkspace } from './hooks/useWorkspace';
 import { useActiveFileWatcher } from './hooks/useActiveFileWatcher';
 import { useToc } from './hooks/useToc';
 import { useLinkNavigation } from './hooks/useLinkNavigation';
@@ -21,24 +22,22 @@ import { useFileOperations } from './hooks/useFileOperations';
 import { useCustomApps } from './hooks/useCustomApps';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useAppContextMenu } from './hooks/useAppContextMenu';
+import { useDiff } from './hooks/useDiff';
 
-function App() {
+function AppContent() {
   const [error, setError] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [sidebarView, setSidebarView] = useState<SidebarView>('explorer');
 
-  // --- テーマ & フルスクリーン ---
+  // --- 各 Context から状態と操作関数を取得 ---
   const {
-    themeMode,
-    effectiveTheme,
-    handleThemeChange,
-    isSettingsOpen,
-    setIsSettingsOpen,
-  } = useTheme();
+    folderPath,
+    folderName,
+    setFolderPath,
+    setFolderName,
+    rootEntries,
+    loadDirectory,
+    registerOnError,
+  } = useWorkspaceContext();
 
-  const { isFullscreen, toggleFullscreen, exitFullscreen } = useFullscreen();
-
-  // --- ペイン管理 ---
   const {
     panes,
     activePaneId,
@@ -48,59 +47,55 @@ function App() {
     handleAutoCloseEmptyPaneChange,
     addTabToPane,
     handleSelectTab,
-    handleClosePane,
     handleCloseTab,
     handleCloseOtherTabs,
     handleCloseTabsToRight,
-    handleSplitPane,
-    handleMoveTab,
     handleReopenClosedTab,
     goToNextTab,
     goToPrevTab,
     goToNthTab,
     closeActiveTab,
     reloadTabContent,
-  } = usePanes();
+  } = usePaneContext();
+
+  const {
+    isSidebarOpen,
+    setIsSidebarOpen,
+    toggleSidebar,
+    themeMode,
+    effectiveTheme,
+    handleThemeChange,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    toggleFullscreen,
+    exitFullscreen,
+    searchPaneId,
+    handleOpenSearch,
+    handleCloseSearch,
+    isQuickOpenOpen,
+    handleOpenQuickOpen,
+    handleCloseQuickOpen,
+  } = useUIContext();
+
+  // ワークスペースエラー通知ハンドラを登録
+  useEffect(() => {
+    registerOnError(setError);
+  }, [registerOnError]);
 
   // --- カスタム外部エディタ設定 ---
   const { customApps, handleCustomAppsChange } = useCustomApps();
 
-  // --- 検索バー状態 ---
-  const [searchPaneId, setSearchPaneId] = useState<string | null>(null);
-
-  const handleOpenSearch = useCallback(() => {
-    setSearchPaneId(activePaneId);
-  }, [activePaneId]);
-
-  const handleCloseSearch = useCallback(() => {
-    setSearchPaneId(null);
-  }, []);
-
-  // --- クイックオープン（Ctrl+P）状態 ---
-  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
-
-  const handleOpenQuickOpen = useCallback(() => {
-    setIsQuickOpenOpen((prev) => !prev);
-  }, []);
-
-  const handleCloseQuickOpen = useCallback(() => {
-    setIsQuickOpenOpen(false);
-  }, []);
-
-  // --- ワークスペース / フォルダ管理 ---
+  // --- 差分比較モーダル状態 ---
   const {
-    folderPath,
-    folderName,
-    setFolderPath,
-    setFolderName,
-    rootEntries,
-    isLoadingRoot,
-    loadDirectory,
-    handleOpenFolder,
-    handleRefreshFolder,
-  } = useWorkspace({
+    isDiffModalOpen,
+    diffModalInitialPath,
+    handleOpenDiffModal,
+    handleCloseDiffModal,
+    handleCompareDiff,
+  } = useDiff({
+    activePaneId,
+    addTabToPane,
     onError: setError,
-    onFolderOpened: () => setIsSidebarOpen(true),
   });
 
   // --- アクティブファイル監視（ホットリフレッシュ） ---
@@ -137,6 +132,7 @@ function App() {
     handleCloseOtherTabs,
     handleCloseTabsToRight,
     handlePrintDocument,
+    onOpenDiff: handleOpenDiffModal,
     onError: setError,
   });
 
@@ -206,7 +202,7 @@ function App() {
       goToTab: goToNthTab,
       openFile: handleOpenFile,
       reopenClosedTab: handleReopenClosedTab,
-      toggleSidebar: () => setIsSidebarOpen((prev) => !prev),
+      toggleSidebar,
       openQuickOpen: handleOpenQuickOpen,
       closeQuickOpen: handleCloseQuickOpen,
       printDocument: handlePrintDocument,
@@ -223,6 +219,7 @@ function App() {
       goToNthTab,
       handleOpenFile,
       handleReopenClosedTab,
+      toggleSidebar,
       handleOpenQuickOpen,
       handleCloseQuickOpen,
       handlePrintDocument,
@@ -241,25 +238,6 @@ function App() {
     isQuickOpenOpen,
   });
 
-  // --- ツールバー用アクション ---
-  const handleToggleExplorer = useCallback(() => {
-    if (isSidebarOpen && sidebarView === 'explorer') {
-      setIsSidebarOpen(false);
-    } else {
-      setIsSidebarOpen(true);
-      setSidebarView('explorer');
-    }
-  }, [isSidebarOpen, sidebarView]);
-
-  const handleToggleToc = useCallback(() => {
-    if (isSidebarOpen && sidebarView === 'toc') {
-      setIsSidebarOpen(false);
-    } else {
-      setIsSidebarOpen(true);
-      setSidebarView('toc');
-    }
-  }, [isSidebarOpen, sidebarView]);
-
   return (
     <div
       className="container"
@@ -271,67 +249,22 @@ function App() {
     >
       {/* ツールバー */}
       <Toolbar
-        isSidebarOpen={isSidebarOpen}
-        sidebarView={sidebarView}
-        onToggleExplorer={handleToggleExplorer}
-        onToggleToc={handleToggleToc}
-        onOpenFolder={handleOpenFolder}
         onOpenFile={handleOpenFile}
-        onOpenQuickOpen={handleOpenQuickOpen}
-        folderName={folderName}
-        hasActiveTab={Boolean(activeTab)}
+        onOpenDiff={handleOpenDiffModal}
         onPrint={handlePrintDocument}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        themeMode={themeMode}
-        effectiveTheme={effectiveTheme}
       />
 
       {/* エラーバー */}
-      {error && (
-        <div className="error" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => setError('')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'inherit',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            title="閉じる"
-            aria-label="エラーを閉じる"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-      )}
+      <ErrorBanner error={error} onClose={() => setError('')} />
 
       {/* メインレイアウト */}
       <div className="main-layout">
         {isSidebarOpen && (
           <Sidebar
-            folderPath={folderPath}
-            folderName={folderName}
-            selectedFilePath={activeTab?.isStandalone ? null : (activeTab?.filePath || null)}
-            rootEntries={rootEntries}
-            isLoadingRoot={isLoadingRoot}
-            onOpenFolder={handleOpenFolder}
-            onRefresh={handleRefreshFolder}
             onSelectFile={(path) => handleSelectFile(path)}
-            onToggleSidebar={() => setIsSidebarOpen(false)}
-            currentView={sidebarView}
-            onChangeView={setSidebarView}
             tocItems={tocItems}
             activeHeadingId={activeHeadingId}
             onSelectHeading={handleSelectHeading}
-            hasActiveTab={Boolean(activeTab)}
             onContextMenuFile={handleContextMenuFile}
           />
         )}
@@ -341,21 +274,8 @@ function App() {
             <MarkdownPane
               key={pane.id}
               pane={pane}
-              isActivePane={pane.id === activePaneId}
-              onFocusPane={setActivePaneId}
-              onSelectTab={handleSelectTab}
-              onCloseTab={handleCloseTab}
-              onSplitPane={panes.length < 3 ? handleSplitPane : undefined}
-              onClosePane={panes.length > 1 ? handleClosePane : undefined}
-              canSplit={panes.length < 3}
-              canClosePane={panes.length > 1}
-              effectiveTheme={effectiveTheme}
-              folderPath={folderPath}
               onLinkClick={handleLinkClick}
-              onDropTab={handleMoveTab}
               onDropFile={handleDropFile}
-              isSearchOpen={searchPaneId === pane.id}
-              onCloseSearch={handleCloseSearch}
               onContextMenuTab={handleContextMenuTab}
               onContextMenuPane={handleContextMenuPane}
             />
@@ -387,19 +307,35 @@ function App() {
         />
       )}
 
+      {/* Diff選択モーダル */}
+      {isDiffModalOpen && (
+        <DiffSelectModal
+          isOpen={isDiffModalOpen}
+          onClose={handleCloseDiffModal}
+          onCompare={handleCompareDiff}
+          workspaceFiles={rootEntries.filter((e) => e.is_markdown)}
+          currentFilePath={diffModalInitialPath || activeTab?.filePath || null}
+        />
+      )}
+
       {/* グローバル右クリックコンテキストメニュー */}
       <ContextMenu state={contextMenu} onClose={closeContextMenu} />
 
       {/* ドラッグオーバーレイ */}
-      {isDragging && (
-        <div className="drag-overlay">
-          <div className="drag-overlay-content">
-            <div className="drag-overlay-icon">📥</div>
-            <div className="drag-overlay-text">Markdownファイルをここにドロップ</div>
-          </div>
-        </div>
-      )}
+      <DragOverlay isDragging={isDragging} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WorkspaceProvider>
+      <PaneProvider>
+        <UIProvider>
+          <AppContent />
+        </UIProvider>
+      </PaneProvider>
+    </WorkspaceProvider>
   );
 }
 

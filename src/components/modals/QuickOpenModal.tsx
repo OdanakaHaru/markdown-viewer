@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { QuickOpenFileItem } from '../types';
-import { MarkdownFileIcon, SearchIcon, CloseIcon } from './Icons';
+import type { QuickOpenFileItem } from '../../types';
+import { MarkdownFileIcon, SearchIcon, CloseIcon } from '../common/Icons';
 
 interface QuickOpenModalProps {
   isOpen: boolean;

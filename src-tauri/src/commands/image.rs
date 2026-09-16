@@ -161,3 +161,120 @@ pub fn read_image_data_url(
 
     Ok(format!("data:{};base64,{}", mime, encoded))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_read_image_data_url_with_fallback() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "md_viewer_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let images_dir = temp_dir.join("images");
+        fs::create_dir_all(&images_dir).unwrap();
+
+        let md_file = temp_dir.join("doc.md");
+        fs::write(&md_file, "# Test").unwrap();
+
+        // 1x1 透明PNGデータ
+        let dummy_png = [
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+            0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+            0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
+            0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        ];
+        let img_path = images_dir.join("sample.png");
+        fs::write(&img_path, dummy_png).unwrap();
+
+        // 1. images/sample.png での直接探索
+        let res1 = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "images/sample.png".to_string(),
+        );
+        assert!(res1.is_ok());
+        assert!(res1.unwrap().starts_with("data:image/png;base64,"));
+
+        // 2. sample.png のみ指定でも images/ 配下のフォールバックで発見できること
+        let res2 = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "sample.png".to_string(),
+        );
+        assert!(res2.is_ok());
+        assert!(res2.unwrap().starts_with("data:image/png;base64,"));
+
+        // クリーンアップ
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_read_image_data_url_patterns() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "md_viewer_img_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let images_dir = temp_dir.join("images");
+        fs::create_dir_all(&images_dir).unwrap();
+
+        let md_file = temp_dir.join("doc.md");
+        fs::write(&md_file, "# Test").unwrap();
+
+        let dummy_png = [
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+            0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+            0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
+            0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        ];
+        let img_path = images_dir.join("sample.png");
+        fs::write(&img_path, dummy_png).unwrap();
+
+        // 1. 絶対パス
+        let abs_path = img_path.to_string_lossy().into_owned();
+        let res_abs = read_image_data_url(None, None, abs_path.clone());
+        assert!(res_abs.is_ok(), "絶対パスでの読み込み失敗: {:?}", res_abs.err());
+
+        // 2. file:/// スキーム
+        let file_url = format!("file:///{}", abs_path.replace('\\', "/"));
+        let res_file_url = read_image_data_url(None, None, file_url);
+        assert!(res_file_url.is_ok(), "file:/// での読み込み失敗: {:?}", res_file_url.err());
+
+        // 3. バックスラッシュ相対パス
+        let res_backslash = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "images\\sample.png".to_string(),
+        );
+        assert!(
+            res_backslash.is_ok(),
+            "バックスラッシュ相対パスでの読み込み失敗: {:?}",
+            res_backslash.err()
+        );
+
+        // 4. ./ 相対パス
+        let res_dot_slash = read_image_data_url(
+            Some(md_file.to_string_lossy().into_owned()),
+            None,
+            "./images/sample.png".to_string(),
+        );
+        assert!(
+            res_dot_slash.is_ok(),
+            "./相対パスでの読み込み失敗: {:?}",
+            res_dot_slash.err()
+        );
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+}
+

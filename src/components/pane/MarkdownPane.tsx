@@ -1,51 +1,51 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import DOMPurify from 'dompurify';
-import type { PaneItem, TabItem } from '../types';
+import type { PaneItem, TabItem } from '../../types';
 import { TabBar } from './TabBar';
 import { SearchBar } from './SearchBar';
+import { DiffViewer } from './DiffViewer';
+import { usePaneContext, useUIContext, useWorkspaceContext } from '../../contexts';
 
-interface MarkdownPaneProps {
+export interface MarkdownPaneProps {
   pane: PaneItem;
-  isActivePane: boolean;
-  onFocusPane: (paneId: string) => void;
-  onSelectTab: (paneId: string, tabId: string) => void;
-  onCloseTab: (paneId: string, tabId: string) => void;
-  onSplitPane?: (paneId: string) => void;
-  onClosePane?: (paneId: string) => void;
-  canSplit: boolean;
-  canClosePane: boolean;
-  effectiveTheme: 'light' | 'dark';
-  folderPath: string | null;
   onLinkClick: (href: string, paneId: string) => void;
-  onDropTab: (sourcePaneId: string, tabId: string, targetPaneId: string) => void;
   onDropFile: (filePath: string, targetPaneId: string) => void;
-  isSearchOpen?: boolean;
-  onCloseSearch?: () => void;
   onContextMenuTab?: (e: React.MouseEvent, tab: TabItem, paneId: string) => void;
   onContextMenuPane?: (e: React.MouseEvent, activeTab: TabItem | null) => void;
 }
 
 export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   pane,
-  isActivePane,
-  onFocusPane,
-  onSelectTab,
-  onCloseTab,
-  onSplitPane,
-  onClosePane,
-  canSplit,
-  canClosePane,
-  effectiveTheme,
-  folderPath,
   onLinkClick,
-  onDropTab,
   onDropFile,
-  isSearchOpen = false,
-  onCloseSearch,
   onContextMenuTab,
   onContextMenuPane,
 }) => {
+  const {
+    panes,
+    activePaneId,
+    setActivePaneId,
+    handleSelectTab,
+    handleCloseTab,
+    handleSplitPane,
+    handleClosePane,
+    handleMoveTab,
+  } = usePaneContext();
+
+  const {
+    effectiveTheme,
+    searchPaneId,
+    handleCloseSearch,
+  } = useUIContext();
+
+  const { folderPath } = useWorkspaceContext();
+
+  const isActivePane = pane.id === activePaneId;
+  const canSplit = panes.length < 3;
+  const canClosePane = panes.length > 1;
+  const isSearchOpen = searchPaneId === pane.id;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId);
   const content = activeTab?.content || '';
@@ -268,7 +268,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
       try {
         const data = JSON.parse(internalData);
         if (data.type === 'tab' && data.paneId && data.tabId) {
-          onDropTab(data.paneId, data.tabId, pane.id);
+          handleMoveTab(data.paneId, data.tabId, pane.id);
         } else if (data.type === 'file' && data.filePath) {
           onDropFile(data.filePath, pane.id);
         }
@@ -281,7 +281,7 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   return (
     <div 
       className={`pane ${isActivePane ? 'active-pane' : ''}`} 
-      onClick={() => onFocusPane(pane.id)}
+      onClick={() => setActivePaneId(pane.id)}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -289,50 +289,54 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
         paneId={pane.id}
         tabs={pane.tabs}
         activeTabId={pane.activeTabId}
-        onSelectTab={(tabId) => onSelectTab(pane.id, tabId)}
-        onCloseTab={(tabId) => onCloseTab(pane.id, tabId)}
-        onSplitPane={onSplitPane ? () => onSplitPane(pane.id) : undefined}
-        onClosePane={onClosePane ? () => onClosePane(pane.id) : undefined}
+        onSelectTab={(tabId) => handleSelectTab(pane.id, tabId)}
+        onCloseTab={(tabId) => handleCloseTab(pane.id, tabId)}
+        onSplitPane={canSplit ? () => handleSplitPane(pane.id) : undefined}
+        onClosePane={canClosePane ? () => handleClosePane(pane.id) : undefined}
         canSplit={canSplit}
         canClosePane={canClosePane}
         isActivePane={isActivePane}
-        onFocusPane={() => onFocusPane(pane.id)}
+        onFocusPane={() => setActivePaneId(pane.id)}
         onContextMenuTab={onContextMenuTab}
       />
       <div className="pane-content">
         {activeTab ? (
-          <div
-            className="markdown-container"
-            data-theme={effectiveTheme}
-            data-color-mode={effectiveTheme}
-            onContextMenu={(e) => {
-              if (onContextMenuPane) {
-                onContextMenuPane(e, activeTab);
-              }
-            }}
-          >
-            {selectedFileName && (
-              <div className="document-header">
-                <div className="document-title-row">
-                  <span className="document-title">{selectedFileName}</span>
-                </div>
-                {selectedFilePath && (
-                  <div className="document-path">{selectedFilePath}</div>
-                )}
-              </div>
-            )}
-            <SearchBar
-              containerRef={containerRef}
-              isOpen={isSearchOpen}
-              onClose={onCloseSearch || (() => {})}
-            />
+          activeTab.isDiff ? (
+            <DiffViewer tab={activeTab} effectiveTheme={effectiveTheme} />
+          ) : (
             <div
-              ref={containerRef}
-              className="markdown-body"
-              onClick={handleHtmlClick}
-              dangerouslySetInnerHTML={{ __html: displayHtml }}
-            />
-          </div>
+              className="markdown-container"
+              data-theme={effectiveTheme}
+              data-color-mode={effectiveTheme}
+              onContextMenu={(e) => {
+                if (onContextMenuPane) {
+                  onContextMenuPane(e, activeTab);
+                }
+              }}
+            >
+              {selectedFileName && (
+                <div className="document-header">
+                  <div className="document-title-row">
+                    <span className="document-title">{selectedFileName}</span>
+                  </div>
+                  {selectedFilePath && (
+                    <div className="document-path">{selectedFilePath}</div>
+                  )}
+                </div>
+              )}
+              <SearchBar
+                containerRef={containerRef}
+                isOpen={isSearchOpen}
+                onClose={handleCloseSearch}
+              />
+              <div
+                ref={containerRef}
+                className="markdown-body"
+                onClick={handleHtmlClick}
+                dangerouslySetInnerHTML={{ __html: displayHtml }}
+              />
+            </div>
+          )
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">📄</div>

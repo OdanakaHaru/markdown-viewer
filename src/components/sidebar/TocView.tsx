@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TocItem } from '../types';
+import type { TocItem } from '../../types';
 
 interface TocViewProps {
   items: TocItem[];

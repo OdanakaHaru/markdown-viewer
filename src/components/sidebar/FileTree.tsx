@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { FileEntry } from '../types';
+import type { FileEntry } from '../../types';
 import {
   ChevronRightIcon,
   ChevronDownIcon,
@@ -8,7 +8,7 @@ import {
   FolderOpenIcon,
   MarkdownFileIcon,
   GenericFileIcon,
-} from './Icons';
+} from '../common/Icons';
 
 interface FileTreeItemProps {
   entry: FileEntry;

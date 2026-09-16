@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
-import type { ThemeMode, CustomApp } from '../types';
-import { SunIcon, MoonIcon, MonitorIcon, CloseIcon, FolderOpenBtnIcon } from './Icons';
-import { generateId } from '../utils/id';
+import type { ThemeMode, CustomApp } from '../../types';
+import { SunIcon, MoonIcon, MonitorIcon, CloseIcon, FolderOpenBtnIcon } from '../common/Icons';
+import { generateId } from '../../utils/id';
 
 interface SettingsModalProps {
   isOpen: boolean;
