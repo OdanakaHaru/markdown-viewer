@@ -187,6 +187,7 @@ ins.diff-ins,
   flex-direction: column;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  scroll-behavior: auto !important;
 }
 
 .diff-line {
@@ -310,28 +311,87 @@ ins.diff-ins,
   color: #c9d1d9;
 }
 
-.diff-select-modal {
-  width: 500px;
-  max-width: 90vw;
+/* Diff File Selection Palette */
+.diff-palette-modal {
+  max-height: 520px;
 }
 
-.diff-select-group {
-  margin: 16px 0;
+.diff-palette-base-bar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
-}
-
-.diff-file-select {
-  padding: 8px;
+  padding: 8px 14px;
   background-color: var(--bg-sidebar);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
 }
 
-.diff-select-actions {
-  margin-bottom: 24px;
+.diff-palette-base-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  background-color: rgba(9, 105, 218, 0.12);
+  color: var(--color-accent, #0969da);
+  border: 1px solid rgba(9, 105, 218, 0.25);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .diff-palette-base-tag {
+  background-color: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+  border-color: rgba(56, 139, 253, 0.3);
+}
+
+.diff-palette-base-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-palette-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-sidebar);
+  font-size: 12px;
+  gap: 12px;
+}
+
+.diff-palette-external-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-pane);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.diff-palette-external-btn:hover {
+  background-color: var(--bg-sidebar-hover);
+  border-color: var(--color-accent);
+}
+
+.diff-palette-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* Split Visual View Styles */
@@ -344,6 +404,7 @@ ins.diff-ins,
   overflow-x: auto !important;
   box-sizing: border-box !important;
   padding: 20px 24px !important;
+  scroll-behavior: auto !important;
 }
 
 .diff-visual-left ins,
@@ -761,4 +822,282 @@ ins.diff-ins,
   color: #7ee787 !important;
 }
 
+/* Git Commit Selection Modal */
+.git-commit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.15));
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
 
+.git-commit-item:hover,
+.git-commit-item.selected {
+  background-color: var(--bg-item-hover, rgba(9, 105, 218, 0.08));
+}
+
+[data-theme="dark"] .git-commit-item:hover,
+[data-theme="dark"] .git-commit-item.selected {
+  background-color: rgba(56, 139, 253, 0.15);
+}
+
+.git-commit-hash {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: rgba(9, 105, 218, 0.12);
+  color: var(--color-accent, #0969da);
+  border: 1px solid rgba(9, 105, 218, 0.25);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+[data-theme="dark"] .git-commit-hash {
+  background-color: rgba(56, 139, 253, 0.18);
+  color: #58a6ff;
+  border-color: rgba(56, 139, 253, 0.35);
+}
+
+.git-commit-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.git-commit-summary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-commit-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Diff Overview Ruler & Navigation Styles
+   ========================================================================== */
+
+.diff-body-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.diff-overview-ruler {
+  position: relative;
+  width: 14px;
+  min-width: 14px;
+  height: 100%;
+  background-color: var(--bg-sidebar, #f6f8fa);
+  border-right: 1px solid var(--border-color, #d0d7de);
+  user-select: none;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+[data-theme="dark"] .diff-overview-ruler,
+.markdown-container[data-theme="dark"] .diff-overview-ruler {
+  background-color: #161b22;
+  border-right-color: #30363d;
+}
+
+.diff-overview-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ビューポート枠 */
+.diff-overview-viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  transition: top 0.04s ease-out;
+  z-index: 1;
+}
+
+[data-theme="dark"] .diff-overview-viewport,
+.markdown-container[data-theme="dark"] .diff-overview-viewport {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* 差分位置マーカー */
+.diff-overview-marker {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  border-radius: 2px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 2;
+}
+
+.diff-overview-marker:hover {
+  opacity: 1;
+  transform: scaleX(1.2);
+  z-index: 4;
+}
+
+.diff-overview-marker.ins {
+  background-color: #2da44e;
+}
+.diff-overview-marker.del {
+  background-color: #cf222e;
+}
+.diff-overview-marker.mod {
+  background-color: #d29922;
+}
+
+[data-theme="dark"] .diff-overview-marker.ins,
+.markdown-container[data-theme="dark"] .diff-overview-marker.ins {
+  background-color: #3fb950;
+}
+[data-theme="dark"] .diff-overview-marker.del,
+.markdown-container[data-theme="dark"] .diff-overview-marker.del {
+  background-color: #f85149;
+}
+[data-theme="dark"] .diff-overview-marker.mod,
+.markdown-container[data-theme="dark"] .diff-overview-marker.mod {
+  background-color: #e3b341;
+}
+
+/* アクティブなマーカーの強調 */
+.diff-overview-marker.active {
+  opacity: 1;
+  z-index: 5;
+  box-shadow: 0 0 0 1.5px #fff, 0 0 5px rgba(9, 105, 218, 0.8);
+}
+[data-theme="dark"] .diff-overview-marker.active,
+.markdown-container[data-theme="dark"] .diff-overview-marker.active {
+  box-shadow: 0 0 0 1.5px #0d1117, 0 0 6px rgba(88, 166, 255, 0.9);
+}
+
+/* ツールバー 差分ナビゲーション */
+.diff-nav-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background-color: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #d0d7de);
+  border-radius: 6px;
+  padding: 1px 4px;
+  margin-left: 6px;
+}
+
+[data-theme="dark"] .diff-nav-group,
+.markdown-container[data-theme="dark"] .diff-nav-group {
+  background-color: #161b22;
+  border-color: #30363d;
+}
+
+.diff-nav-btn {
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  height: 22px !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer;
+  color: var(--text-primary);
+  border-radius: 4px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diff-nav-btn:hover:not(:disabled) {
+  background-color: var(--bg-sidebar-hover, rgba(0, 0, 0, 0.06)) !important;
+}
+
+.diff-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.diff-nav-count {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  padding: 0 4px;
+  color: var(--text-muted, #57606a);
+  white-space: nowrap;
+  user-select: none;
+}
+
+[data-theme="dark"] .diff-nav-count,
+.markdown-container[data-theme="dark"] .diff-nav-count {
+  color: #8b949e;
+}
+
+/* ジャンプ時のターゲット要素フラッシュ強調 */
+@keyframes diff-target-pulse {
+  0% {
+    background-color: rgba(9, 105, 218, 0.35) !important;
+    outline: 2px solid #0969da !important;
+    box-shadow: 0 0 0 4px rgba(9, 105, 218, 0.35) !important;
+  }
+  40% {
+    background-color: rgba(9, 105, 218, 0.2) !important;
+    outline: 2px solid #0969da !important;
+    box-shadow: 0 0 0 6px rgba(9, 105, 218, 0.15) !important;
+  }
+  100% {
+    outline: 2px solid transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+.diff-target-flash {
+  animation: diff-target-pulse 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .diff-target-flash,
+.markdown-container[data-theme="dark"] .diff-target-flash {
+  animation: diff-target-pulse-dark 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+@keyframes diff-target-pulse-dark {
+  0% {
+    background-color: rgba(56, 139, 253, 0.4) !important;
+    outline: 2px solid #58a6ff !important;
+    box-shadow: 0 0 0 4px rgba(56, 139, 253, 0.45) !important;
+  }
+  40% {
+    background-color: rgba(56, 139, 253, 0.22) !important;
+    outline: 2px solid #58a6ff !important;
+    box-shadow: 0 0 0 6px rgba(56, 139, 253, 0.2) !important;
+  }
+  100% {
+    outline: 2px solid transparent !important;
+    box-shadow: none !important;
+  }
+}

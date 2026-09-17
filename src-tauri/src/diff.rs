@@ -25,8 +25,12 @@ pub struct DiffResult {
 }
 
 pub fn compute_diff(old_text: &str, new_text: &str, old_html: &str, new_html: &str) -> DiffResult {
+    // 改行コード（CRLF / LF）やBOMの違いで全行が差分扱いになるのを防ぐため、LFに統一
+    let old_clean = old_text.strip_prefix('\u{feff}').unwrap_or(old_text).replace("\r\n", "\n");
+    let new_clean = new_text.strip_prefix('\u{feff}').unwrap_or(new_text).replace("\r\n", "\n");
+
     // 1. Line-by-line diff for Split View
-    let text_diff = TextDiff::from_lines(old_text, new_text);
+    let text_diff = TextDiff::from_lines(&old_clean, &new_clean);
     let mut left_lines = Vec::new();
     let mut right_lines = Vec::new();
     let mut additions = 0;
@@ -37,7 +41,7 @@ pub fn compute_diff(old_text: &str, new_text: &str, old_html: &str, new_html: &s
 
     for op in text_diff.ops() {
         for change in text_diff.iter_changes(op) {
-            let val = change.value().to_string();
+            let val = change.value().trim_end_matches(['\r', '\n']).to_string();
             match change.tag() {
                 ChangeTag::Delete => {
                     deletions += 1;
@@ -162,7 +166,9 @@ fn generate_mermaid_code_diff_html(diff_mode: &str, old_val: &str, new_val: &str
         return format!("<del class=\"diff-del\">{}</del>", escaped);
     }
 
-    let text_diff = TextDiff::from_lines(old_val, new_val);
+    let old_clean = old_val.replace("\r\n", "\n");
+    let new_clean = new_val.replace("\r\n", "\n");
+    let text_diff = TextDiff::from_lines(&old_clean, &new_clean);
     let mut out = String::new();
 
     for change in text_diff.iter_all_changes() {
@@ -507,6 +513,34 @@ mod tests {
 
         assert!(r.contains("data-diff-mode=\"right\""));
         assert!(r.contains("<ins class=\"diff-ins\">"));
+    }
+
+    #[test]
+    fn test_compute_diff_crlf_vs_lf() {
+        let old_text = "Line 1\nLine 2\nLine 3";
+        let new_text = "Line 1\r\nLine 2\r\nLine 3";
+        let diff = compute_diff(old_text, new_text, "<p>Line 1 Line 2 Line 3</p>", "<p>Line 1 Line 2 Line 3</p>");
+
+        assert_eq!(diff.stats.additions, 0, "CRLF vs LF の改行違いのみで追加と判定されてはならない");
+        assert_eq!(diff.stats.deletions, 0, "CRLF vs LF の改行違いのみで削除と判定されてはならない");
+        assert_eq!(diff.left_lines.len(), 3);
+        assert_eq!(diff.right_lines.len(), 3);
+        for line in &diff.left_lines {
+            assert_eq!(line.kind, "equal");
+        }
+        for line in &diff.right_lines {
+            assert_eq!(line.kind, "equal");
+        }
+    }
+
+    #[test]
+    fn test_compute_diff_crlf_with_actual_diff() {
+        let old_text = "Line 1\nLine 2\nLine 3";
+        let new_text = "Line 1\r\nLine 2 (updated)\r\nLine 3";
+        let diff = compute_diff(old_text, new_text, "", "");
+
+        assert_eq!(diff.stats.additions, 1);
+        assert_eq!(diff.stats.deletions, 1);
     }
 }
 

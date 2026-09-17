@@ -49,11 +49,62 @@ export function useDiff({ activePaneId, addTabToPane, onError }: UseDiffOptions)
     [activePaneId, addTabToPane, onError]
   );
 
+  const handleCompareGitDiff = useCallback(
+    async (filePath: string, revision: string = 'HEAD') => {
+      try {
+        const diffResult = await invoke<DiffResult>('compare_git_markdown', {
+          filePath,
+          revision,
+        });
+
+        const fileNameOnly = filePath.split(/[\\/]/).pop() || filePath;
+        const newTab: TabItem = {
+          id: generateId(),
+          filePath: `git://${revision}::${filePath}`,
+          fileName: `Git Diff: ${fileNameOnly} (${revision} ↔ 作業ツリー)`,
+          content: '',
+          isDiff: true,
+          isGitDiff: true,
+          gitRevision: revision,
+          gitFilePath: filePath,
+          diffResult,
+          diffViewMode: 'visual',
+        };
+
+        addTabToPane(activePaneId, newTab);
+      } catch (e) {
+        console.error('Git Diff error:', e);
+        onError(String(e));
+      }
+    },
+    [activePaneId, addTabToPane, onError]
+  );
+
+  const [isGitCommitModalOpen, setIsGitCommitModalOpen] = useState(false);
+  const [gitCommitModalFilePath, setGitCommitModalFilePath] = useState<string | null>(null);
+
+  const handleOpenGitCommitModal = useCallback((filePath: string) => {
+    setGitCommitModalFilePath(filePath);
+    setIsGitCommitModalOpen(true);
+  }, []);
+
+  const handleCloseGitCommitModal = useCallback(() => {
+    setIsGitCommitModalOpen(false);
+    setGitCommitModalFilePath(null);
+  }, []);
+
   return {
     isDiffModalOpen,
     diffModalInitialPath,
     handleOpenDiffModal,
     handleCloseDiffModal,
     handleCompareDiff,
+    handleCompareGitDiff,
+    isGitCommitModalOpen,
+    gitCommitModalFilePath,
+    handleOpenGitCommitModal,
+    handleCloseGitCommitModal,
   };
 }
+
+

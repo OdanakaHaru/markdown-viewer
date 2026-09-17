@@ -16,6 +16,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::file::open_md_file,
             commands::file::open_folder,
+            commands::file::reset_file_dialog_size,
             commands::file::read_directory,
             commands::file::read_md_file,
             commands::file::open_in_app,
@@ -27,7 +28,10 @@ pub fn run() {
             commands::watcher::watch_active_files,
             commands::workspace::list_workspace_markdown_files,
             commands::diff::compare_markdown_files,
-            commands::diff::compare_markdown_text
+            commands::diff::compare_markdown_text,
+            commands::git::compare_git_markdown,
+            commands::git::check_git_status,
+            commands::git::get_git_commit_history
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

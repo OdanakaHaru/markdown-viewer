@@ -12,6 +12,7 @@ export interface ContextMenuIcons {
   explorer?: ReactNode;
   copy?: ReactNode;
   print?: ReactNode;
+  git?: ReactNode;
 }
 
 /**
@@ -71,6 +72,8 @@ export interface BuildFileContextMenuOptions {
   actions: {
     onOpenInApp: (path: string, appType: 'vscode' | 'notepad' | 'default' | 'custom', appPath?: string) => void;
     onOpenDiff: (path: string) => void;
+    onCompareGit?: (path: string, revision?: string) => void;
+    onOpenGitCommitModal?: (path: string) => void;
     onRevealInExplorer: (path: string) => void;
     onCopyPath: (path: string) => void;
   };
@@ -101,6 +104,24 @@ export function buildFileContextMenuItems({
       'file',
       icons
     );
+
+    if (actions.onCompareGit) {
+      items.push({
+        id: 'git-diff-compare',
+        label: 'Git HEAD と差分比較',
+        icon: icons?.git || icons?.explorer,
+        onClick: () => actions.onCompareGit!(entry.path, 'HEAD'),
+      });
+    }
+
+    if (actions.onOpenGitCommitModal) {
+      items.push({
+        id: 'git-commit-history-diff',
+        label: 'Git コミット履歴と比較...',
+        icon: icons?.git || icons?.explorer,
+        onClick: () => actions.onOpenGitCommitModal!(entry.path),
+      });
+    }
 
     items.push({
       id: 'diff-compare',
@@ -162,6 +183,8 @@ export interface BuildTabContextMenuOptions {
     onOpenInApp: (path: string, appType: 'vscode' | 'notepad' | 'default' | 'custom', appPath?: string) => void;
     onRevealInExplorer: (path: string) => void;
     onOpenDiff: (path: string) => void;
+    onCompareGit?: (path: string, revision?: string) => void;
+    onOpenGitCommitModal?: (path: string) => void;
     onCopyPath: (path: string) => void;
     onCloseTab: (paneId: string, tabId: string) => void;
     onCloseOtherTabs: (paneId: string, tabId: string) => void;
@@ -205,6 +228,26 @@ export function buildTabContextMenuItems({
       icon: icons?.explorer,
       onClick: () => actions.onRevealInExplorer(tab.filePath),
     },
+    ...(actions.onCompareGit && !tab.filePath.startsWith('git://') && !tab.filePath.includes('::')
+      ? [
+          {
+            id: 'tab-git-diff-compare',
+            label: 'Git HEAD と差分比較',
+            icon: icons?.git || icons?.explorer,
+            onClick: () => actions.onCompareGit!(tab.filePath, 'HEAD'),
+          },
+        ]
+      : []),
+    ...(actions.onOpenGitCommitModal && !tab.filePath.startsWith('git://') && !tab.filePath.includes('::')
+      ? [
+          {
+            id: 'tab-git-commit-history-diff',
+            label: 'Git コミット履歴と比較...',
+            icon: icons?.git || icons?.explorer,
+            onClick: () => actions.onOpenGitCommitModal!(tab.filePath),
+          },
+        ]
+      : []),
     {
       id: 'tab-diff-compare',
       label: '別ファイルと差分比較...',

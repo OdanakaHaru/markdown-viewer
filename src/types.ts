@@ -21,9 +21,33 @@ export interface TabItem {
   scrollTop?: number;  // ペインごとの独立したスクロール位置（任意）
   isStandalone?: boolean; // フォルダ配下ではなく単体（D&D等）で開かれたファイルかどうか
   isDiff?: boolean;    // Diff仮想タブかどうか
+  isGitDiff?: boolean; // Git Diff仮想タブかどうか
+  gitRevision?: string; // 比較対象のGitリビジョン（例: 'HEAD'）
+  gitFilePath?: string; // 対象ファイルのローカル絶対パス
   diffResult?: DiffResult; // Diff結果データ
   diffViewMode?: DiffViewMode; // 'visual' または 'split'
 }
+
+export interface GitStatusInfo {
+  is_git_available: boolean;
+  is_repo: boolean;
+  has_head: boolean;
+  is_tracked: boolean;
+  relative_path?: string | null;
+  repo_root?: string | null;
+  branch?: string | null;
+}
+
+export interface GitCommitInfo {
+  hash: string;
+  short_hash: string;
+  author: string;
+  relative_date: string;
+  date: string;
+  summary: string;
+}
+
+
 
 export type DiffViewMode = 'visual' | 'split' | 'split-visual';
 

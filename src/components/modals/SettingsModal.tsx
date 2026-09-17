@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { open } from '@tauri-apps/plugin-dialog';
+import { openWithDefaultSize } from '../../utils/dialog';
 import type { ThemeMode, CustomApp } from '../../types';
 import { SunIcon, MoonIcon, MonitorIcon, CloseIcon, FolderOpenBtnIcon } from '../common/Icons';
 import { generateId } from '../../utils/id';
@@ -57,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleBrowseCustomEditor = async (appId: string) => {
     try {
-      const selected = await open({
+      const selected = await openWithDefaultSize({
         multiple: false,
         directory: false,
         title: 'カスタムエディタの実行ファイルを選択',

@@ -14,6 +14,7 @@ import {
   ExplorerIcon,
   CopyIcon,
   PrintIcon,
+  GitIcon,
 } from '../components/common/Icons';
 
 interface UseAppContextMenuProps {
@@ -24,6 +25,8 @@ interface UseAppContextMenuProps {
   handleCloseTabsToRight: (paneId: string, tabId: string) => void;
   handlePrintDocument: () => void;
   onOpenDiff: (path?: string) => void;
+  onCompareGit?: (path: string, revision?: string) => void;
+  onOpenGitCommitModal?: (path: string) => void;
   onError?: (msg: string) => void;
 }
 
@@ -34,6 +37,7 @@ const ICONS: ContextMenuIcons = {
   explorer: <ExplorerIcon />,
   copy: <CopyIcon />,
   print: <PrintIcon />,
+  git: <GitIcon />,
 };
 
 export function useAppContextMenu({
@@ -44,6 +48,8 @@ export function useAppContextMenu({
   handleCloseTabsToRight,
   handlePrintDocument,
   onOpenDiff,
+  onCompareGit,
+  onOpenGitCommitModal,
   onError,
 }: UseAppContextMenuProps) {
   const {
@@ -66,6 +72,8 @@ export function useAppContextMenu({
         actions: {
           onOpenInApp: handleOpenInApp,
           onOpenDiff,
+          onCompareGit,
+          onOpenGitCommitModal,
           onRevealInExplorer: handleRevealInExplorer,
           onCopyPath: handleCopyPath,
         },
@@ -78,6 +86,8 @@ export function useAppContextMenu({
       customApps,
       handleOpenInApp,
       onOpenDiff,
+      onCompareGit,
+      onOpenGitCommitModal,
       handleRevealInExplorer,
       handleCopyPath,
       openContextMenu,
@@ -97,6 +107,8 @@ export function useAppContextMenu({
           onOpenInApp: handleOpenInApp,
           onRevealInExplorer: handleRevealInExplorer,
           onOpenDiff,
+          onCompareGit,
+          onOpenGitCommitModal,
           onCopyPath: handleCopyPath,
           onCloseTab: handleCloseTab,
           onCloseOtherTabs: handleCloseOtherTabs,
@@ -112,6 +124,8 @@ export function useAppContextMenu({
       handleOpenInApp,
       handleRevealInExplorer,
       onOpenDiff,
+      onCompareGit,
+      onOpenGitCommitModal,
       handleCopyPath,
       handleCloseTab,
       handleCloseOtherTabs,

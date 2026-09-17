@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { openWithDefaultSize } from '../utils/dialog';
 import type { FileEntry } from '../types';
 import { getPathBaseName } from '../utils/path';
 
@@ -38,16 +39,24 @@ export function useWorkspace({ onError, onFolderOpened }: UseWorkspaceOptions = 
       return;
     }
     try {
-      const path = await invoke<string>('open_folder');
+      const selected = await openWithDefaultSize({
+        directory: true,
+        multiple: false,
+        title: 'Markdownドキュメントが含まれる親フォルダーを選択',
+      });
+      if (!selected) {
+        return;
+      }
+      const path = Array.isArray(selected) ? selected[0] : selected;
+      if (!path) return;
+
       const name = getPathBaseName(path) || path;
       setFolderPath(path);
       setFolderName(name);
       onFolderOpened?.();
       await loadDirectory(path);
     } catch (err: unknown) {
-      if (err !== 'No folder selected') {
-        onError?.(typeof err === 'string' ? err : 'フォルダの選択に失敗しました。');
-      }
+      onError?.(typeof err === 'string' ? err : 'フォルダの選択に失敗しました。');
     }
   }, [loadDirectory, onError, onFolderOpened]);
 

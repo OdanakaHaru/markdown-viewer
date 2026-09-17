@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import 'github-markdown-css/github-markdown.css';
 import './App.css';
 import { Sidebar } from './components/sidebar';
-import { SettingsModal, QuickOpenModal, DiffSelectModal } from './components/modals';
+import { SettingsModal, QuickOpenModal, DiffSelectModal, GitCommitSelectModal } from './components/modals';
 import { MarkdownPane } from './components/pane';
 import { ContextMenu, ErrorBanner, DragOverlay } from './components/common';
 import { Toolbar } from './components/toolbar';
@@ -92,6 +92,11 @@ function AppContent() {
     handleOpenDiffModal,
     handleCloseDiffModal,
     handleCompareDiff,
+    handleCompareGitDiff,
+    isGitCommitModalOpen,
+    gitCommitModalFilePath,
+    handleOpenGitCommitModal,
+    handleCloseGitCommitModal,
   } = useDiff({
     activePaneId,
     addTabToPane,
@@ -133,6 +138,8 @@ function AppContent() {
     handleCloseTabsToRight,
     handlePrintDocument,
     onOpenDiff: handleOpenDiffModal,
+    onCompareGit: handleCompareGitDiff,
+    onOpenGitCommitModal: handleOpenGitCommitModal,
     onError: setError,
   });
 
@@ -307,14 +314,29 @@ function AppContent() {
         />
       )}
 
-      {/* Diff選択モーダル */}
+      {/* Diff選択パレットモーダル */}
       {isDiffModalOpen && (
         <DiffSelectModal
           isOpen={isDiffModalOpen}
           onClose={handleCloseDiffModal}
           onCompare={handleCompareDiff}
+          onCompareGit={handleCompareGitDiff}
+          onOpenGitCommitModal={handleOpenGitCommitModal}
+          folderPath={folderPath}
+          folderName={folderName}
+          openTabs={allOpenTabs}
           workspaceFiles={rootEntries.filter((e) => e.is_markdown)}
           currentFilePath={diffModalInitialPath || activeTab?.filePath || null}
+        />
+      )}
+
+      {/* Git過去コミット選択モーダル */}
+      {isGitCommitModalOpen && gitCommitModalFilePath && (
+        <GitCommitSelectModal
+          isOpen={isGitCommitModalOpen}
+          onClose={handleCloseGitCommitModal}
+          filePath={gitCommitModalFilePath}
+          onSelectCommit={(commit) => handleCompareGitDiff(gitCommitModalFilePath, commit.short_hash)}
         />
       )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { openWithDefaultSize } from '../utils/dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { PaneItem, TabItem } from '../types';
 import { generateId } from '../utils/id';
@@ -144,7 +145,20 @@ export function useFileOperations({
       return;
     }
     try {
-      const [path, text] = await invoke<[string, string]>('open_md_file');
+      const selected = await openWithDefaultSize({
+        multiple: false,
+        directory: false,
+        title: 'Markdownファイルを選択',
+        filters: [{
+          name: 'Markdown',
+          extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'],
+        }],
+      });
+      if (!selected) return;
+      const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+      if (!selectedPath) return;
+
+      const [path, text] = await invoke<[string, string]>('read_md_file', { path: selectedPath });
       const filename = getPathBaseName(path) || 'Untitled';
 
       const targetPane = panes.find((p) => p.id === activePaneId);
@@ -178,9 +192,7 @@ export function useFileOperations({
         await loadDirectory(parentDir);
       }
     } catch (err: unknown) {
-      if (err !== 'No file selected') {
-        onError?.(typeof err === 'string' ? err : 'ファイルの選択に失敗しました。');
-      }
+      onError?.(typeof err === 'string' ? err : 'ファイルの選択に失敗しました。');
     }
   }, [
     activePaneId,

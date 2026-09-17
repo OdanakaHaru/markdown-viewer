@@ -286,9 +286,184 @@ fn open_with_notepad(path: &str) -> Result<(), String> {
     }
 }
 
+/// Windows環境において、Explorerダイアログ（IFileDialog）が前回サイズを記憶して横長等になるのを防ぐため、
+/// ComDlg32\CIDSizeMRU から現在のアプリケーションに関するエントリを削除し、毎回デフォルトサイズで開くようにする。
+#[cfg(windows)]
+pub fn reset_windows_file_dialog_size() {
+    use std::ffi::c_void;
+    use std::os::windows::ffi::OsStrExt;
+
+    #[allow(clippy::upper_case_acronyms)]
+    type HKEY = *mut c_void;
+    #[allow(clippy::upper_case_acronyms)]
+    type LSTATUS = i32;
+    const HKEY_CURRENT_USER: HKEY = 0x80000001u32 as usize as HKEY;
+    const KEY_READ: u32 = 0x20019;
+    const KEY_WRITE: u32 = 0x20006;
+    const ERROR_SUCCESS: LSTATUS = 0;
+
+    #[link(name = "advapi32")]
+    extern "system" {
+        fn RegOpenKeyExW(
+            hKey: HKEY,
+            lpSubKey: *const u16,
+            ulOptions: u32,
+            samDesired: u32,
+            phkResult: *mut HKEY,
+        ) -> LSTATUS;
+
+        fn RegEnumValueW(
+            hKey: HKEY,
+            dwIndex: u32,
+            lpValueName: *mut u16,
+            lpcchValueName: *mut u32,
+            lpReserved: *mut u32,
+            lpType: *mut u32,
+            lpData: *mut u8,
+            lpcbData: *mut u32,
+        ) -> LSTATUS;
+
+        fn RegDeleteValueW(hKey: HKEY, lpValueName: *const u16) -> LSTATUS;
+
+        fn RegQueryValueExW(
+            hKey: HKEY,
+            lpValueName: *const u16,
+            lpReserved: *mut u32,
+            lpType: *mut u32,
+            lpData: *mut u8,
+            lpcbData: *mut u32,
+        ) -> LSTATUS;
+
+        fn RegSetValueExW(
+            hKey: HKEY,
+            lpValueName: *const u16,
+            Reserved: u32,
+            dwType: u32,
+            lpData: *const u8,
+            cbData: u32,
+        ) -> LSTATUS;
+
+        fn RegCloseKey(hKey: HKEY) -> LSTATUS;
+    }
+
+    let exe_name = match std::env::current_exe() {
+        Ok(path) => path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default(),
+        Err(_) => return,
+    };
+
+    let subkey: Vec<u16> = std::ffi::OsStr::new("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\CIDSizeMRU")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    unsafe {
+        let mut hkey: HKEY = std::ptr::null_mut();
+        if RegOpenKeyExW(HKEY_CURRENT_USER, subkey.as_ptr(), 0, KEY_READ | KEY_WRITE, &mut hkey) != ERROR_SUCCESS {
+            return;
+        }
+
+        let mut index = 0u32;
+        let mut to_delete: Vec<(String, u32)> = Vec::new();
+
+        loop {
+            let mut name_buf = [0u16; 256];
+            let mut name_len = name_buf.len() as u32;
+            let mut val_type = 0u32;
+            let mut data_buf = [0u8; 1024];
+            let mut data_len = data_buf.len() as u32;
+
+            let status = RegEnumValueW(
+                hkey,
+                index,
+                name_buf.as_mut_ptr(),
+                &mut name_len,
+                std::ptr::null_mut(),
+                &mut val_type,
+                data_buf.as_mut_ptr(),
+                &mut data_len,
+            );
+
+            if status != ERROR_SUCCESS {
+                break;
+            }
+
+            let val_name = String::from_utf16_lossy(&name_buf[..name_len as usize]);
+            if let Ok(entry_num) = val_name.parse::<u32>() {
+                if data_len >= 2 {
+                    let u16_slice = std::slice::from_raw_parts(
+                        data_buf.as_ptr() as *const u16,
+                        (data_len / 2) as usize,
+                    );
+                    let data_str = String::from_utf16_lossy(u16_slice).to_lowercase();
+                    if (!exe_name.is_empty() && data_str.contains(&exe_name)) || data_str.contains("app.exe") {
+                        to_delete.push((val_name, entry_num));
+                    }
+                }
+            }
+
+            index += 1;
+        }
+
+        if to_delete.is_empty() {
+            RegCloseKey(hkey);
+            return;
+        }
+
+        let delete_ids: std::collections::HashSet<u32> = to_delete.iter().map(|(_, num)| *num).collect();
+        for (name, _) in &to_delete {
+            let wide_name: Vec<u16> = std::ffi::OsStr::new(name)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            RegDeleteValueW(hkey, wide_name.as_ptr());
+        }
+
+        let mru_name: Vec<u16> = std::ffi::OsStr::new("MRUListEx")
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let mut mru_buf = [0u8; 1024];
+        let mut mru_len = mru_buf.len() as u32;
+        let mut mru_type = 0u32;
+
+        if RegQueryValueExW(hkey, mru_name.as_ptr(), std::ptr::null_mut(), &mut mru_type, mru_buf.as_mut_ptr(), &mut mru_len) == ERROR_SUCCESS {
+            let count = (mru_len / 4) as usize;
+            let mut new_mru: Vec<u8> = Vec::with_capacity(mru_len as usize);
+            let raw_slice = std::slice::from_raw_parts(mru_buf.as_ptr() as *const u32, count);
+            for &id in raw_slice {
+                if !delete_ids.contains(&id) {
+                    new_mru.extend_from_slice(&id.to_le_bytes());
+                }
+            }
+            if !new_mru.is_empty() {
+                RegSetValueExW(hkey, mru_name.as_ptr(), 0, mru_type, new_mru.as_ptr(), new_mru.len() as u32);
+            }
+        }
+
+        RegCloseKey(hkey);
+    }
+}
+
+#[cfg(not(windows))]
+pub fn reset_windows_file_dialog_size() {}
+
+/// エクスプローラーダイアログの記憶サイズを初期化するコマンド
+#[tauri::command]
+pub fn reset_file_dialog_size() {
+    reset_windows_file_dialog_size();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_reset_file_dialog_size_does_not_panic() {
+        reset_windows_file_dialog_size();
+    }
 
     #[test]
     fn test_open_in_app_errors() {
