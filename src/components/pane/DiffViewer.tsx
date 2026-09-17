@@ -2,6 +2,20 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import { invoke } from '@tauri-apps/api/core';
 import type { TabItem } from '../../types';
+import { useMermaidRenderer } from '../../hooks/useMermaidRenderer';
+
+const diffPurifyConfig = {
+  USE_PROFILES: { html: true, svg: true, svgFilters: true },
+  ADD_TAGS: ['del', 'ins', 'input', 'button', 'foreignObject', 'style'],
+  ADD_ATTR: [
+    'class', 'data-lang', 'data-view', 'title', 'aria-label', 'id', 'src', 'alt',
+    'viewBox', 'd', 'x', 'y', 'rx', 'ry', 'fill', 'stroke', 'stroke-width',
+    'stroke-linecap', 'stroke-linejoin', 'style', 'transform',
+    'data-diff-mode', 'data-mermaid-old', 'data-mermaid-new'
+  ],
+  ALLOW_DATA_ATTR: true,
+};
+
 
 interface DiffViewerProps {
   tab: TabItem;
@@ -22,6 +36,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ tab, effectiveTheme }) =
   const [pathA, pathB] = tab.filePath.includes('::') ? tab.filePath.split('::') : ['', ''];
   const oldFileName = pathA ? pathA.split(/[\\/]/).pop() || pathA : '比較元 (旧)';
   const newFileName = pathB ? pathB.split(/[\\/]/).pop() || pathB : '比較先 (新)';
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 差分データの再取得（ファイル変更時やマウント時、更新ボタン押下時）
   const refreshDiff = useCallback(async () => {
@@ -69,12 +85,58 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ tab, effectiveTheme }) =
 
   const diffResult = currentDiffResult || tab.diffResult;
 
+  // 表示モードに応じたHTMLコンテンツ依存キー（モード切替時やデータ更新時に再レンダリング）
+  const diffContentKey = diffResult
+    ? `${diffViewMode}:${diffResult.unified_html?.length || 0}:${diffResult.old_html?.length || 0}:${diffResult.new_html?.length || 0}`
+    : null;
+
+  // Mermaidダイアグラムの非同期描画 & UI制御
+  useMermaidRenderer(containerRef, diffContentKey, effectiveTheme);
+
+  // コードブロックのコピーボタン処理
+  const handleCopyClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const copyBtn = target.closest('.code-copy-btn, .code-block-copy-btn') as HTMLButtonElement | null;
+    if (copyBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = copyBtn.closest('.code-block-container');
+      const pre = container ? container.querySelector('pre') : copyBtn.closest('pre');
+      if (!pre) return;
+      const code = pre.querySelector('code');
+      const text = code ? code.textContent || '' : (pre.textContent || '').replace(/コピー(完了)?$/, '');
+
+      const existingTimer = copyBtn.getAttribute('data-timer-id');
+      if (existingTimer) {
+        window.clearTimeout(parseInt(existingTimer, 10));
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.classList.add('copied');
+        const textSpan = copyBtn.querySelector('.code-copy-text, .copy-btn-text');
+        if (textSpan) textSpan.textContent = 'コピー完了';
+        copyBtn.setAttribute('title', 'コピー完了');
+        const timerId = window.setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          if (textSpan) textSpan.textContent = 'コピー';
+          copyBtn.setAttribute('title', 'コードをコピー');
+          copyBtn.removeAttribute('data-timer-id');
+        }, 2000);
+        copyBtn.setAttribute('data-timer-id', timerId.toString());
+      }).catch((err) => {
+        console.error('クリップボードへのコピーに失敗しました:', err);
+      });
+    }
+  };
+
   if (!diffResult) {
     return <div className="p-4">差分データがありません</div>;
   }
 
   return (
     <div 
+      ref={containerRef}
+      onClick={handleCopyClick}
       className="diff-viewer-container markdown-container"
       data-theme={effectiveTheme}
       data-color-mode={effectiveTheme}
@@ -128,10 +190,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ tab, effectiveTheme }) =
         <div className="diff-unified-content markdown-body">
           <div 
             dangerouslySetInnerHTML={{ 
-              __html: DOMPurify.sanitize(diffResult.unified_html, { 
-                ADD_TAGS: ['del', 'ins'], 
-                ADD_ATTR: ['class'] 
-              }) 
+              __html: DOMPurify.sanitize(diffResult.unified_html, diffPurifyConfig) 
             }} 
           />
         </div>
@@ -148,11 +207,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ tab, effectiveTheme }) =
               onScroll={handleScrollLeft}
               style={{ padding: '16px', display: 'block', width: '100%', overflowY: 'auto' }}
               dangerouslySetInnerHTML={{ 
-                __html: DOMPurify.sanitize(diffResult.old_html, { 
-                  ADD_TAGS: ['del', 'ins'], 
-                  ADD_ATTR: ['class'] 
-                }) 
-              }}
+                __html: DOMPurify.sanitize(diffResult.old_html, diffPurifyConfig) 
+              }} 
             />
           </div>
           <div className="diff-split-column right" style={{ flex: '1 1 50%', width: '50%', maxWidth: '50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -166,11 +222,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ tab, effectiveTheme }) =
               onScroll={handleScrollRight}
               style={{ padding: '16px', display: 'block', width: '100%', overflowY: 'auto' }}
               dangerouslySetInnerHTML={{ 
-                __html: DOMPurify.sanitize(diffResult.new_html, { 
-                  ADD_TAGS: ['del', 'ins'], 
-                  ADD_ATTR: ['class'] 
-                }) 
-              }}
+                __html: DOMPurify.sanitize(diffResult.new_html, diffPurifyConfig) 
+              }} 
             />
           </div>
         </div>

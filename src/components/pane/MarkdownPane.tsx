@@ -6,6 +6,7 @@ import { TabBar } from './TabBar';
 import { SearchBar } from './SearchBar';
 import { DiffViewer } from './DiffViewer';
 import { usePaneContext, useUIContext, useWorkspaceContext } from '../../contexts';
+import { useMermaidRenderer } from '../../hooks/useMermaidRenderer';
 
 export interface MarkdownPaneProps {
   pane: PaneItem;
@@ -77,11 +78,14 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   // Windowsドライブレター(C:\等)、file:、data:、相対パスを許可してローカル画像パスが削除されるのを防ぐ
   const purifyConfig = useMemo(
     () => ({
-      ADD_TAGS: ['input', 'button', 'svg', 'path', 'rect'], // タスクリストおよびコードブロックUI用
+      USE_PROFILES: { html: true, svg: true, svgFilters: true },
+      ADD_TAGS: ['input', 'button', 'foreignObject', 'style'], // タスクリスト、MermaidおよびコードブロックUI用
       ADD_ATTR: [
-        'checked', 'disabled', 'type', 'target', 'rel', 'id', 'src', 'alt', 'width', 'height', 'loading',
-        'data-lang', 'title', 'aria-label', 'viewBox', 'd', 'x', 'y', 'rx', 'ry', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
+        'class', 'checked', 'disabled', 'type', 'target', 'rel', 'id', 'src', 'alt', 'width', 'height', 'loading',
+        'data-lang', 'data-view', 'title', 'aria-label', 'viewBox', 'd', 'x', 'y', 'rx', 'ry', 'fill',
+        'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'style', 'transform'
       ],
+      ALLOW_DATA_ATTR: true,
       ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|file|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$)|\b[a-zA-Z]:|^[a-zA-Z]:)/i,
     }),
     []
@@ -99,6 +103,9 @@ export const MarkdownPane: React.FC<MarkdownPaneProps> = ({
   // content が更新された直後は initialSanitized、画像置換完了後は replacedState.html を使用
   const displayHtml =
     replacedState && replacedState.content === content ? replacedState.html : initialSanitized;
+
+  // Mermaidダイアグラムの非同期描画 & UI制御
+  useMermaidRenderer(containerRef, displayHtml, effectiveTheme);
 
   // ローカル画像の非同期置換
   useEffect(() => {

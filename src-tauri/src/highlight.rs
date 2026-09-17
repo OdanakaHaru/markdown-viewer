@@ -30,6 +30,7 @@ pub fn highlight_code_block(code: &str, lang: Option<&str>) -> String {
             .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
     };
 
+    let is_mermaid = token == "mermaid";
     let display_lang = if token.is_empty() {
         "text".to_string()
     } else {
@@ -56,11 +57,33 @@ pub fn highlight_code_block(code: &str, lang: Option<&str>) -> String {
         html_gen.finalize()
     };
 
+    let container_class = if is_mermaid {
+        "code-block-container code-block-mermaid"
+    } else {
+        "code-block-container"
+    };
+
     format!(
-        "<div class=\"code-block-container\" data-lang=\"{}\"><div class=\"code-block-header\"><span class=\"code-block-lang\">{}</span><button class=\"code-block-copy-btn\" type=\"button\" title=\"コードをコピー\"><svg class=\"copy-icon\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg><span class=\"copy-btn-text\">コピー</span></button></div><pre><code class=\"language-{}\">{}</code></pre></div>",
+        "<div class=\"{}\" data-lang=\"{}\"><div class=\"code-block-header\"><span class=\"code-block-lang\">{}</span><button class=\"code-block-copy-btn\" type=\"button\" title=\"コードをコピー\"><svg class=\"copy-icon\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg><span class=\"copy-btn-text\">コピー</span></button></div><pre><code class=\"language-{}\">{}</code></pre></div>",
+        container_class,
         escape_html(&display_lang),
         escape_html(&display_lang),
         escape_html(&display_lang),
         code_html
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_highlight_code_block_mermaid() {
+        let code = "graph TD\n    A --> B";
+        let html = highlight_code_block(code, Some("mermaid"));
+        assert!(html.contains("code-block-mermaid"));
+        assert!(html.contains("data-lang=\"mermaid\""));
+        assert!(html.contains("language-mermaid"));
+    }
+}
+
